@@ -360,7 +360,6 @@ def _free_app_payment_retired_response(action='payment'):
 
 
 @stripe_bp.route('/create-checkout-session', methods=['POST'])
-@require_auth
 def create_checkout_session():
     return _free_app_payment_retired_response('checkout')
     _refresh_stripe_key()
@@ -637,7 +636,6 @@ def confirm_robin_credit_checkout_session():
 
 
 @stripe_bp.route('/create-retention-checkout-session', methods=['POST'])
-@require_auth
 def create_retention_checkout_session():
     return _free_app_payment_retired_response('retention checkout')
     _refresh_stripe_key()
@@ -757,7 +755,6 @@ def create_retention_checkout_session():
 
 
 @stripe_bp.route('/confirm-checkout-session', methods=['POST'])
-@require_auth
 def confirm_checkout_session():
     return _free_app_payment_retired_response('checkout confirmation')
     _refresh_stripe_key()
@@ -796,7 +793,6 @@ def confirm_checkout_session():
 
 
 @stripe_bp.route('/create-customer-portal', methods=['POST'])
-@require_auth
 def create_customer_portal():
     return _free_app_payment_retired_response('billing portal')
     _refresh_stripe_key()
@@ -824,7 +820,6 @@ def create_customer_portal():
 
 
 @stripe_bp.route('/cancel-subscription', methods=['POST'])
-@require_auth
 def cancel_subscription():
     return _free_app_payment_retired_response('subscription cancellation')
     _refresh_stripe_key()
@@ -879,7 +874,6 @@ def cancel_subscription():
 
 
 @stripe_bp.route('/resume-subscription', methods=['POST'])
-@require_auth
 def resume_subscription():
     return _free_app_payment_retired_response('subscription renewal')
     _refresh_stripe_key()
@@ -1034,7 +1028,6 @@ def _refund_eligibility_status(reason, days_since_purchase, questions_completed,
 
 
 @stripe_bp.route('/request-refund', methods=['POST'])
-@require_auth
 def request_refund():
     return _free_app_payment_retired_response('refund request')
     _refresh_stripe_key()
