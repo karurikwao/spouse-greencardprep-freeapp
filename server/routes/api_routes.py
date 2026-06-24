@@ -529,6 +529,9 @@ def call_rpc(func_name):
     if func_name not in allowed_functions:
         return jsonify({'error': f'Function {func_name} not found'}), 404
 
+    if func_name in RETIRED_FREE_APP_RPC_FUNCTIONS:
+        return _free_app_workflow_retired_response(func_name.replace('_', ' '))
+
     admin_only_functions = {
         'update_sitemap_frequency', 'update_seo_expansion_page_status',
         'record_scheduler_run', 'record_rebuild_attempt',
@@ -566,9 +569,6 @@ def call_rpc(func_name):
 
     if func_name in auth_required_functions and not user:
         return jsonify({'error': 'Authentication required'}), 401
-
-    if func_name in RETIRED_FREE_APP_RPC_FUNCTIONS:
-        return _free_app_workflow_retired_response(func_name.replace('_', ' '))
 
     if func_name == 'process-refund':
         return process_refund()
@@ -3512,7 +3512,6 @@ def record_notification_event_endpoint(notification_id):
 
 
 @api_bp.route('/support/tickets', methods=['POST'])
-@require_auth
 def create_support_ticket_endpoint():
     return _free_app_workflow_retired_response('support ticket')
     user = request.current_user
@@ -3637,7 +3636,6 @@ def create_support_ticket_endpoint():
 
 
 @api_bp.route('/support/tickets/<ticket_id>/reply', methods=['POST'])
-@require_auth
 def user_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('support ticket reply')
     user = request.current_user
@@ -3767,7 +3765,6 @@ def user_reply_support_ticket(ticket_id):
 
 
 @api_bp.route('/admin/support/tickets', methods=['GET', 'POST'])
-@require_admin
 def admin_support_tickets():
     return _free_app_workflow_retired_response('admin support ticket')
     data = request.get_json(silent=True) or {}
@@ -3815,7 +3812,6 @@ def admin_support_tickets():
 
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/reply', methods=['POST'])
-@require_admin
 def admin_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket reply')
     user = request.current_user
@@ -3844,7 +3840,6 @@ def admin_reply_support_ticket(ticket_id):
 
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/close', methods=['POST'])
-@require_admin
 def admin_close_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket close')
     ticket = _support_ticket_with_user(ticket_id)
@@ -3953,7 +3948,6 @@ def admin_memory_status():
 
 
 @api_bp.route('/process-refund', methods=['POST'])
-@require_admin
 def process_refund():
     return _free_app_workflow_retired_response('refund processing')
     import stripe
