@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Calm, professional color palette */
+    --background: 210 38% 97%;
+    --foreground: 222 54% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 54% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 24% 12%;
+    /* Muted blue primary - trustworthy, calm */
+    --primary: 211 55% 32%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 15% 95%;
+    --secondary-foreground: 222 20% 18%;
+    --muted: 210 15% 95%;
+    --muted-foreground: 218 34% 24%;
+    --accent: 210 30% 96%;
+    --accent-foreground: 211 55% 28%;
+    /* Softer destructive */
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 86%;
+    --input: 220 13% 84%;
+    --ring: 210 40% 50%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 220 10% 30%;
+    --sidebar-primary: 210 40% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 210 40% 35%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 40% 50%;
+    
+    /* Custom calm colors */
+    --calm-blue: 210 40% 45%;
+    --calm-green: 160 30% 40%;
+    --calm-amber: 35 50% 50%;
+    --calm-rose: 350 40% 50%;
+    --calm-slate: 220 10% 40%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: hsl(var(--foreground));
+  }
+}
+
+body .text-muted-foreground:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *),
+body .text-slate-500:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *) {
+  color: #274160;
+}
+
+body .text-slate-400:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *) {
+  color: #516987;
+}
+
+body .text-slate-600:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *) {
+  color: #173153;
+}
+
+body .text-slate-700:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *) {
+  color: #0b2342;
+}
+
+body .text-slate-800:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *),
+body .text-slate-900:not(footer):not(footer *):not(.bg-slate-900):not(.bg-slate-900 *) {
+  color: #06162f;
+}
+
+body .placeholder\:text-muted-foreground::placeholder {
+  color: #516987;
+}

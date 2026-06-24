@@ -1,0 +1,38 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.SpouseInterview.com/sitemap.xml
+
+# Disallow admin routes
+Disallow: /admin/
+Disallow: /superadmin/
+
+# Allow public content
+Allow: /questions/
+Allow: /topics/
+Allow: /marriage-interview-questions
+Allow: /immigration-interview-question-database
+Allow: /marriage-green-card-interview-preparation
+Allow: /interview-topics
+
+# Cluster pillar pages
+Allow: /uscis-marriage-interview-questions-about-relationship-history
+Allow: /uscis-marriage-interview-questions-about-wedding-ceremony
+Allow: /uscis-marriage-interview-questions-about-living-together
+Allow: /uscis-marriage-interview-questions-about-family-social-life
+Allow: /uscis-marriage-interview-questions-about-finances
+
+# Cluster supporting pages
+Allow: /how-did-you-meet-your-spouse-uscis-interview
+Allow: /marriage-interview-questions-about-your-proposal
+Allow: /uscis-interview-questions-about-dating
+Allow: /marriage-interview-questions-about-your-wedding-ceremony
+Allow: /uscis-interview-questions-about-wedding-guests
+Allow: /green-card-interview-questions-about-your-home
+Allow: /green-card-interview-questions-about-daily-routines
+Allow: /uscis-interview-questions-about-household-chores
+Allow: /marriage-interview-questions-about-in-laws
+Allow: /green-card-interview-questions-about-friends
+Allow: /marriage-interview-questions-about-shared-bank-accounts
+Allow: /uscis-interview-questions-about-joint-assets

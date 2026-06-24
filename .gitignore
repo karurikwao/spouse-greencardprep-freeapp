@@ -1,0 +1,15 @@
+.codex-run/
+app/node_modules/
+node_modules/
+app/dist/
+dist/
+app/.env
+server/.env
+.env
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+~$*

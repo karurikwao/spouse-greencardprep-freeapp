@@ -1,0 +1,8 @@
+[functions.trigger-coolify-rebuild]
+enabled = true
+verify_jwt = true
+
+[functions.trigger-coolify-rebuild.secrets]
+# COOLIFY_WEBHOOK_URL is stored securely server-side
+# Set this via Supabase CLI or Dashboard: 
+# supabase secrets set COOLIFY_WEBHOOK_URL="your-coolify-webhook-url"

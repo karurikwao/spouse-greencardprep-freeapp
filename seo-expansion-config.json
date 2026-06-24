@@ -1,0 +1,11 @@
+{
+  "settings": {
+    "pattern_pages_enabled": false,
+    "situation_pages_enabled": false,
+    "include_in_sitemap": false,
+    "noindex_until_approved": true,
+    "updated_at": null
+  },
+  "published_pages": [],
+  "generated_at": "2026-06-24T22:02:29.061Z"
+}

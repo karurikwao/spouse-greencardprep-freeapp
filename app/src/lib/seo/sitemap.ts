@@ -1,0 +1,288 @@
+/**
+ * Sitemap Generation
+ * Creates dynamic sitemap entries for all SEO pages
+ */
+
+import { 
+  getAllQuestions, 
+  buildCategoryHubs 
+} from './questionUniverse';
+import { getSitemapFrequency } from './settings';
+import { 
+  getAllPillarPages, 
+  getAllSupportingPages 
+} from './clusters';
+// Import situation pages directly to avoid type issues
+const EXISTING_SITUATION_PAGES = [
+  { slug: 'interview-preparation', title: 'Interview Preparation' },
+  { slug: 'couple-interview-separation', title: 'Couple Interview Separation' },
+  { slug: 'evidence-of-relationship', title: 'Evidence of Relationship' },
+] as const;
+
+import { generateSitemapXML } from './utils';
+import type { SitemapEntry } from './types';
+
+const BASE_URL = 'https://www.SpouseInterview.com';
+
+/**
+ * Generate sitemap entries for question pages
+ */
+export function generateQuestionSitemapEntries(): SitemapEntry[] {
+  const questions = getAllQuestions();
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  
+  return questions.map(q => ({
+    url: `${BASE_URL}/questions/${q.slug}`,
+    lastModified: q.updatedAt || now,
+    changeFrequency: frequency,
+    priority: 0.8,
+  }));
+}
+
+/**
+ * Generate sitemap entries for topic/category hub pages
+ */
+export function generateTopicSitemapEntries(): SitemapEntry[] {
+  const categories = buildCategoryHubs();
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  
+  return categories.map(c => ({
+    url: `${BASE_URL}/topics/${c.slug}`,
+    lastModified: now,
+    changeFrequency: frequency,
+    priority: 0.9,
+  }));
+}
+
+/**
+ * Generate sitemap entries for existing situation pages
+ * These are the original 3 situation pages that have always been public
+ */
+export function generateSituationSitemapEntries(): SitemapEntry[] {
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  
+  return EXISTING_SITUATION_PAGES.map(s => ({
+    url: `${BASE_URL}/${s.slug}`,
+    lastModified: now,
+    changeFrequency: frequency,
+    priority: 0.7,
+  }));
+}
+
+/**
+ * Generate sitemap entries for hub pages
+ */
+export function generateHubSitemapEntries(): SitemapEntry[] {
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  
+  return [
+    {
+      url: `${BASE_URL}/marriage-green-card-interview-preparation`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.98, // Highest priority hub page - authority content
+    },
+    {
+      url: `${BASE_URL}/marriage-interview-questions`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.95, // High priority hub page
+    },
+    {
+      url: `${BASE_URL}/immigration-interview-question-database`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/interview-topics`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.9, // High priority hub page for topic discovery
+    },
+  ];
+}
+
+/**
+ * Generate sitemap entries for static pages
+ */
+export function generateStaticSitemapEntries(): SitemapEntry[] {
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  
+  return [
+    {
+      url: `${BASE_URL}/`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 1.0,
+    },
+    {
+      url: `${BASE_URL}/dashboard`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/readiness`,
+      lastModified: now,
+      changeFrequency: frequency,
+      priority: 0.8,
+    },
+  ];
+}
+
+/**
+ * Generate sitemap entries for pillar pages (cluster hubs)
+ */
+export function generatePillarSitemapEntries(): SitemapEntry[] {
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  const pillarPages = getAllPillarPages();
+  
+  return pillarPages.map(p => ({
+    url: `${BASE_URL}/${p.slug}`,
+    lastModified: now,
+    changeFrequency: frequency,
+    priority: 0.8,
+  }));
+}
+
+/**
+ * Generate sitemap entries for supporting pages (cluster sub-pages)
+ */
+export function generateSupportingSitemapEntries(): SitemapEntry[] {
+  const now = new Date().toISOString();
+  const frequency = getSitemapFrequency();
+  const supportingPages = getAllSupportingPages();
+  
+  return supportingPages.map(p => ({
+    url: `${BASE_URL}/${p.slug}`,
+    lastModified: now,
+    changeFrequency: frequency,
+    priority: 0.7,
+  }));
+}
+
+/**
+ * Generate sitemap entries for expansion pages
+ * These are the new SEO expansion pages controlled by the admin publishing workflow
+ * 
+ * NOTE: During build time, this function may not have access to Supabase.
+ * It reads from a JSON file that is synced from Supabase during the build process.
+ */
+export function generateExpansionSitemapEntries(): SitemapEntry[] {
+  try {
+    // Try to read the synced expansion pages config
+    // This file is generated by scripts/sync-expansion-pages.ts during build
+    // @ts-ignore - require is available at build time
+    const expansionConfig = require('../../../seo-expansion-config.json');
+    
+    if (!expansionConfig?.published_pages?.length) {
+      return [];
+    }
+    
+    const now = new Date().toISOString();
+    const frequency = getSitemapFrequency();
+    
+    return expansionConfig.published_pages
+      .filter((p: { include_in_sitemap: boolean }) => p.include_in_sitemap)
+      .map((p: { slug: string }) => ({
+        url: `${BASE_URL}/${p.slug}`,
+        lastModified: now,
+        changeFrequency: frequency,
+        priority: 0.6, // Lower priority than core pages
+      }));
+  } catch {
+    // If the config file doesn't exist or there's an error, return empty array
+    // This is safe - expansion pages won't be in sitemap until properly configured
+    return [];
+  }
+}
+
+/**
+ * Generate complete sitemap
+ */
+export function generateCompleteSitemap(): string {
+  const entries = [
+    ...generateStaticSitemapEntries(),
+    ...generateHubSitemapEntries(),
+    ...generatePillarSitemapEntries(),
+    ...generateSupportingSitemapEntries(),
+    ...generateTopicSitemapEntries(),
+    ...generateQuestionSitemapEntries(),
+    ...generateSituationSitemapEntries(),
+    ...generateExpansionSitemapEntries(), // Add expansion pages if published
+  ];
+  
+  return generateSitemapXML(entries);
+}
+
+/**
+ * Get sitemap stats for debugging/monitoring
+ */
+export function getSitemapStats(): {
+  totalUrls: number;
+  questions: number;
+  topics: number;
+  situations: number;
+  hubPages: number;
+  staticPages: number;
+  pillarPages: number;
+  supportingPages: number;
+  expansionPages: number;
+} {
+  return {
+    totalUrls: [
+      ...generateStaticSitemapEntries(),
+      ...generateHubSitemapEntries(),
+      ...generatePillarSitemapEntries(),
+      ...generateSupportingSitemapEntries(),
+      ...generateTopicSitemapEntries(),
+      ...generateQuestionSitemapEntries(),
+      ...generateSituationSitemapEntries(),
+      ...generateExpansionSitemapEntries(),
+    ].length,
+    questions: generateQuestionSitemapEntries().length,
+    topics: generateTopicSitemapEntries().length,
+    situations: generateSituationSitemapEntries().length,
+    hubPages: generateHubSitemapEntries().length,
+    staticPages: generateStaticSitemapEntries().length,
+    pillarPages: generatePillarSitemapEntries().length,
+    supportingPages: generateSupportingSitemapEntries().length,
+    expansionPages: generateExpansionSitemapEntries().length,
+  };
+}
+
+/**
+ * Generate robots.txt content
+ */
+export function generateRobotsTxt(): string {
+  return `User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: ${BASE_URL}/sitemap.xml
+
+# Disallow admin routes
+Disallow: /admin/
+Disallow: /superadmin/
+
+# Allow public content
+Allow: /questions/
+Allow: /topics/
+Allow: /marriage-interview-questions
+Allow: /immigration-interview-question-database
+Allow: /marriage-green-card-interview-preparation
+Allow: /interview-topics
+Allow: /uscis-marriage-interview-questions-about-relationship-history
+Allow: /uscis-marriage-interview-questions-about-wedding-ceremony
+Allow: /uscis-marriage-interview-questions-about-living-together
+Allow: /uscis-marriage-interview-questions-about-family-social-life
+Allow: /uscis-marriage-interview-questions-about-finances
+`;
+}
