@@ -16,7 +16,7 @@ from lifecycle_messages import send_lifecycle_dashboard_message
 auth_bp = Blueprint('auth', __name__)
 GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs'
 GOOGLE_TOKENINFO_URL = 'https://oauth2.googleapis.com/tokeninfo'
-GOOGLE_CLIENT_ID_FALLBACK = '39326050245-27vfptarof8c1s0qv3lcdpvkmpk0u6te.apps.googleusercontent.com'
+GOOGLE_CLIENT_ID_FALLBACK = '525916855163-4qt3urorpvh8lrs6rqidcscngcmn999d.apps.googleusercontent.com'
 google_jwks_client = PyJWKClient(GOOGLE_JWKS_URL)
 
 

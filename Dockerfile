@@ -1,12 +1,14 @@
-# Redeploy marker: 2026-06-01 Google auth client ID
+# Redeploy marker: 2026-06-24 Google auth client ID
 FROM node:24-alpine AS frontend
 
 WORKDIR /app
 COPY app/package*.json ./
 RUN npm ci
 COPY app/ ./
-ENV VITE_API_URL=
-ENV VITE_GOOGLE_CLIENT_ID=39326050245-27vfptarof8c1s0qv3lcdpvkmpk0u6te.apps.googleusercontent.com
+ARG VITE_API_URL=
+ARG VITE_GOOGLE_CLIENT_ID=525916855163-4qt3urorpvh8lrs6rqidcscngcmn999d.apps.googleusercontent.com
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 RUN npm run build
 
 FROM python:3.12-slim
