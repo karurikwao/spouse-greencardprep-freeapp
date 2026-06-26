@@ -1313,11 +1313,31 @@ interface TimelineBuilderSectionProps {
 }
 
 function RobinFloatingLauncher({ onOpenRobin }: { onOpenRobin: () => void }) {
+  const [dockCenterOnMobile, setDockCenterOnMobile] = useState(false);
+
+  useEffect(() => {
+    const syncPosition = () => {
+      const isMobile = window.matchMedia('(max-width: 639px)').matches;
+      setDockCenterOnMobile(isMobile && window.scrollY > 80);
+    };
+
+    syncPosition();
+    window.addEventListener('scroll', syncPosition, { passive: true });
+    window.addEventListener('resize', syncPosition);
+    return () => {
+      window.removeEventListener('scroll', syncPosition);
+      window.removeEventListener('resize', syncPosition);
+    };
+  }, []);
+
   return (
     <Button
       type="button"
       onClick={onOpenRobin}
-      className="fixed bottom-5 right-4 z-40 rounded-full bg-gradient-to-r from-indigo-700 to-cyan-700 px-4 py-6 font-extrabold text-white shadow-2xl shadow-indigo-500/30 hover:from-indigo-800 hover:to-cyan-800 sm:right-6"
+      className={cn(
+        'fixed bottom-5 z-40 rounded-full bg-gradient-to-r from-indigo-700 to-cyan-700 px-4 py-6 font-extrabold text-white shadow-2xl shadow-indigo-500/30 transition-[left,right,transform] duration-300 hover:from-indigo-800 hover:to-cyan-800',
+        dockCenterOnMobile ? 'left-1/2 right-auto -translate-x-1/2' : 'right-4 sm:right-6'
+      )}
       aria-label="Ask Robin"
     >
       <Bot className="mr-2 h-5 w-5" />
