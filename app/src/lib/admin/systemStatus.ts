@@ -54,6 +54,16 @@ export interface AdminAISettings {
   roleAssignments?: Record<AdminAIRoleId, AdminAIRoleAssignment>;
 }
 
+export interface AdminAIProviderTestResult {
+  success: boolean;
+  provider: string;
+  model: string;
+  latencyMs?: number;
+  preview?: string;
+  errorCode?: string;
+  userMessage?: string;
+}
+
 export interface AdminLawyerDirectoryEntry {
   id: string;
   active: boolean;
@@ -217,7 +227,7 @@ async function adminJson<T>(path: string, method: 'GET' | 'POST' = 'GET', body?:
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error || response.statusText || 'Admin request failed');
+    throw new Error(payload.userMessage || payload.error || response.statusText || 'Admin request failed');
   }
   return payload as T;
 }
@@ -241,6 +251,24 @@ export async function refreshAdminAIProviderModels(
     providerConfig,
   });
   return payload.models || [];
+}
+
+export async function testAdminAIProvider(
+  provider: string,
+  model: string,
+  providerConfig?: AdminAIProviderSetting
+): Promise<AdminAIProviderTestResult> {
+  return adminJson<AdminAIProviderTestResult>('/api/admin/ai-provider-test', 'POST', {
+    provider,
+    model,
+    providerConfig,
+  });
+}
+
+export async function sendAdminEmailTest(email?: string): Promise<{ success: boolean; provider?: string; skipped?: boolean; messageId?: string }> {
+  return adminJson<{ success: boolean; provider?: string; skipped?: boolean; messageId?: string }>('/api/admin/email-test', 'POST', {
+    email,
+  });
 }
 
 export async function fetchAdminLawyerDirectory(): Promise<AdminLawyerDirectorySettings> {

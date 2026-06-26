@@ -168,6 +168,13 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (Deno.env.get('LEGACY_PAID_EDGE_FUNCTIONS_ENABLED') !== 'true') {
+    return new Response(
+      JSON.stringify({ error: 'Legacy paid checkout is retired in the free app.', code: 'FREE_APP_PAYMENT_RETIRED' }),
+      { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     // Verify Stripe is configured
     if (!STRIPE_SECRET_KEY) {

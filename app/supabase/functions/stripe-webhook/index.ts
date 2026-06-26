@@ -455,6 +455,13 @@ async function handlePaymentFailed(
 // ============================================================================
 
 serve(async (req) => {
+  if (Deno.env.get('LEGACY_PAID_EDGE_FUNCTIONS_ENABLED') !== 'true') {
+    return new Response(
+      JSON.stringify({ error: 'Legacy Stripe subscription webhooks are retired in the free app.', code: 'FREE_APP_PAYMENT_RETIRED' }),
+      { status: 410, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });

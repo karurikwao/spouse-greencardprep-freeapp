@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
 
+const CONTACT_RECIPIENT = 'support@spouseinterview.com';
+
 export function Contact() {
   const backHref = typeof window !== 'undefined' && localStorage.getItem('auth_token') ? '/dashboard' : '/';
   const backLabel = backHref === '/dashboard' ? 'Back to Dashboard' : 'Back to Home';
@@ -15,16 +17,19 @@ export function Contact() {
     subject: '',
     message: ''
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [notice, setNotice] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would send this to a backend
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({ name: '', email: '', subject: '', message: '' });
-    }, 3000);
+    const body = [
+      `Name: ${formData.name}`,
+      `Email: ${formData.email}`,
+      '',
+      formData.message,
+    ].join('\n');
+    const mailtoUrl = `mailto:${CONTACT_RECIPIENT}?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    setNotice('Your email app should open with this message ready to send.');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -114,15 +119,12 @@ export function Contact() {
             <CardDescription>Fill out the form below and we&apos;ll respond within 24-48 hours.</CardDescription>
           </CardHeader>
           <CardContent>
-            {submitted ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                  <Send className="h-8 w-8 text-green-600" />
+            <>
+              {notice && (
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+                  {notice}
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Message Sent!</h3>
-                <p className="text-slate-600">Thank you for reaching out. We&apos;ll get back to you soon.</p>
-              </div>
-            ) : (
+              )}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
@@ -185,12 +187,12 @@ export function Contact() {
                 </Button>
 
                 <p className="text-xs text-slate-500 text-center">
-                  By submitting this form, you agree to our{' '}
+                  This opens your email app so you can review and send the message. By contacting us, you agree to our{' '}
                   <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a> and{' '}
                   <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>.
                 </p>
               </form>
-            )}
+            </>
           </CardContent>
         </Card>
 

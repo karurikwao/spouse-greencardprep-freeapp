@@ -72,6 +72,8 @@ import {
   saveAdminPdfDownloadOffer,
   saveAdminRobinUsageSettings,
   saveAdminWelcomeMessages,
+  sendAdminEmailTest,
+  testAdminAIProvider,
   type AdminAdSettings,
   type AdminAISettings,
   type AdminAIRoleId,
@@ -2172,6 +2174,7 @@ function AIConfigTab() {
   const [settingsNotice, setSettingsNotice] = useState('');
   const [savingSettingsKey, setSavingSettingsKey] = useState<'ai' | 'welcome' | 'robinUsage' | 'lawyer' | null>(null);
   const [refreshingProvider, setRefreshingProvider] = useState<string | null>(null);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const isSavingAnySettings = Boolean(savingSettingsKey);
 
   const envLines = configureProvider ? buildProviderEnvLines(configureProvider) : [];
@@ -2287,15 +2290,22 @@ function AIConfigTab() {
     });
     const defaultProvider = aiSettings.defaultProvider || status?.ai.defaultProvider || 'unified';
     const defaultProviderMatch = editableProviders.find(provider => provider.provider === defaultProvider);
+    const selectedDefaultModel = (
+      aiSettings.defaultModel?.trim()
+      || (defaultProviderMatch ? providerDefaultModel(defaultProviderMatch) : '')
+      || status?.ai.defaultModel?.trim()
+      || 'auto'
+    );
+    if (defaultProvider) {
+      providers[defaultProvider] = {
+        ...(providers[defaultProvider] || {}),
+        defaultModel: selectedDefaultModel,
+      };
+    }
     return {
       ...aiSettings,
       defaultProvider,
-      defaultModel: (
-        aiSettings.defaultModel?.trim()
-        || status?.ai.defaultModel?.trim()
-        || (defaultProviderMatch ? providerDefaultModel(defaultProviderMatch) : '')
-        || 'auto'
-      ),
+      defaultModel: selectedDefaultModel,
       providers,
     };
   };
@@ -2362,11 +2372,28 @@ function AIConfigTab() {
           [provider.provider]: models,
         },
       } : prev);
-      setSettingsNotice(`Loaded ${models.length} model${models.length === 1 ? '' : 's'} from ${provider.label}. Save settings to keep this list.`);
+      setSettingsNotice(`Loaded ${models.length} known model${models.length === 1 ? '' : 's'} for ${provider.label}. Use Test model to verify the key, base URL, and selected model.`);
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : `Unable to refresh ${provider.label} models`);
     } finally {
       setRefreshingProvider(null);
+    }
+  };
+
+  const testProviderModel = async (provider: AdminProviderStatus) => {
+    if (!aiSettings) return;
+    const model = providerDefaultModel(provider);
+    setTestingProvider(provider.provider);
+    setSettingsNotice('');
+    try {
+      const result = await testAdminAIProvider(provider.provider, model, aiSettings.providers?.[provider.provider] || {});
+      setSettingsNotice(
+        `Test passed for ${provider.label} / ${result.model}${result.latencyMs ? ` in ${result.latencyMs}ms` : ''}. ${result.preview || ''}`.trim()
+      );
+    } catch (err) {
+      setSettingsNotice(err instanceof Error ? err.message : `Unable to test ${provider.label}`);
+    } finally {
+      setTestingProvider(null);
     }
   };
 
@@ -2749,7 +2776,15 @@ function AIConfigTab() {
                   <Label className="font-bold text-slate-900">Default provider</Label>
                   <select
                     value={aiSettings.defaultProvider || status?.ai.defaultProvider || 'unified'}
-                    onChange={(event) => setAiSettings(prev => prev ? { ...prev, defaultProvider: event.target.value } : prev)}
+                    onChange={(event) => {
+                      const nextProvider = event.target.value;
+                      const providerMatch = editableProviders.find(provider => provider.provider === nextProvider);
+                      setAiSettings(prev => prev ? {
+                        ...prev,
+                        defaultProvider: nextProvider,
+                        defaultModel: providerMatch ? providerDefaultModel(providerMatch) : '',
+                      } : prev);
+                    }}
                     className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950"
                   >
                     {editableProviders.map(provider => (
@@ -2838,6 +2873,17 @@ function AIConfigTab() {
                           <RefreshCw className={cn('mr-2 h-4 w-4', refreshingProvider === provider.provider && 'animate-spin')} />
                           Refresh models
                         </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => testProviderModel(provider)}
+                          disabled={testingProvider === provider.provider}
+                          className="font-bold"
+                        >
+                          {testingProvider === provider.provider ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                          Test model
+                        </Button>
                         <span className="text-xs font-semibold text-slate-600">
                           {(aiSettings.modelCatalog?.[provider.provider]?.length || 0).toLocaleString()} loaded
                         </span>
@@ -2845,7 +2891,14 @@ function AIConfigTab() {
                       {Boolean(aiSettings.modelCatalog?.[provider.provider]?.length) && (
                         <div className="max-h-28 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs font-semibold text-slate-700">
                           {(aiSettings.modelCatalog?.[provider.provider] || []).slice(0, 12).map(model => (
-                            <div key={model} className="truncate">{model}</div>
+                            <button
+                              key={model}
+                              type="button"
+                              onClick={() => updateAIProviderSetting(provider.provider, { defaultModel: model })}
+                              className="block w-full truncate rounded-md px-2 py-1 text-left hover:bg-white hover:text-indigo-700"
+                            >
+                              {model}
+                            </button>
                           ))}
                         </div>
                       )}
@@ -2996,7 +3049,7 @@ function AIConfigTab() {
         <Card className="border-2 border-blue-200 bg-gradient-to-br from-white via-blue-50/70 to-amber-50/60 shadow-lg shadow-blue-100/60">
           <CardHeader>
             <CardTitle className="text-base">Automatic Dashboard Messages</CardTitle>
-            <CardDescription>Send a welcome message after signup and an unlock message after upgrade.</CardDescription>
+            <CardDescription>Send a welcome message after signup and an optional Robin access update message.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -3010,7 +3063,7 @@ function AIConfigTab() {
               </div>
               <div className="space-y-3 rounded-2xl border border-amber-100 bg-white/90 p-4">
                 <label className="flex items-center justify-between gap-3 font-bold text-slate-900">
-                  Upgrade welcome
+                  Robin access update
                   <Switch checked={welcomeSettings.upgradeEnabled} onCheckedChange={(checked) => setWelcomeSettings(prev => prev ? { ...prev, upgradeEnabled: checked } : prev)} />
                 </label>
                 <Input value={welcomeSettings.upgradeTitle} onChange={(event) => setWelcomeSettings(prev => prev ? { ...prev, upgradeTitle: event.target.value } : prev)} className="font-semibold text-slate-950" />
@@ -3482,6 +3535,7 @@ function SystemTab() {
     ok: false,
     message: 'Checking API health...',
   });
+  const [emailTest, setEmailTest] = useState({ isSending: false, message: '' });
 
   const checkApiHealth = useCallback(async () => {
     setApiHealth(prev => ({ ...prev, isChecking: true }));
@@ -3508,6 +3562,24 @@ function SystemTab() {
   useEffect(() => {
     void checkApiHealth();
   }, [checkApiHealth]);
+
+  const handleEmailTest = async () => {
+    setEmailTest({ isSending: true, message: '' });
+    try {
+      const result = await sendAdminEmailTest();
+      setEmailTest({
+        isSending: false,
+        message: result.skipped
+          ? 'Email provider key is missing, so the test was skipped by the server.'
+          : `Email test sent with ${result.provider || status?.email.provider || 'the configured provider'}.`,
+      });
+    } catch (err) {
+      setEmailTest({
+        isSending: false,
+        message: err instanceof Error ? err.message : 'Unable to send email test.',
+      });
+    }
+  };
 
   const browserOrigin = typeof window !== 'undefined' ? window.location.origin : 'Browser origin unavailable';
   const adminApiReady = Boolean(status && !error);
@@ -3639,13 +3711,22 @@ function SystemTab() {
           </div>
 
           <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            <div className="font-medium text-slate-800">Transactional email</div>
-            <div className="mt-1">
-              Provider: <span className="font-medium">{status?.email.provider || 'Not loaded'}</span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="font-medium text-slate-800">Transactional email</div>
+                <div className="mt-1">
+                  Provider: <span className="font-medium">{status?.email.provider || 'Not loaded'}</span>
+                </div>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={handleEmailTest} disabled={emailTest.isSending || !status}>
+                {emailTest.isSending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                Test email
+              </Button>
             </div>
             <div className="mt-1">
               Welcome, password reset, and optional Robin credit confirmation emails use the configured server email provider.
             </div>
+            {emailTest.message && <div className="mt-2 font-semibold text-slate-800">{emailTest.message}</div>}
             {status?.email.fromAddress && (
               <div className="mt-2 break-all">From: {status.email.fromAddress}</div>
             )}

@@ -12,8 +12,31 @@ interface AdPlacementProps {
   className?: string;
 }
 
+const AD_BLOCKED_PATHS = [
+  '/privacy',
+  '/terms',
+  '/terms-of-service',
+  '/contact',
+  '/reset-password',
+  '/account',
+  '/billing-success',
+  '/billing-cancel',
+  '/refund-policy',
+  '/messages',
+  '/robin',
+  '/admin',
+  '/superadmin',
+];
+
+function isAdBlockedRoute() {
+  if (typeof window === 'undefined') return true;
+  const path = window.location.pathname.toLowerCase();
+  return AD_BLOCKED_PATHS.some((blockedPath) => path === blockedPath || path.startsWith(`${blockedPath}/`));
+}
+
 export function AdPlacement({ placement, className }: AdPlacementProps) {
   const [settings, setSettings] = useState<PublicAdSettings | null>(null);
+  const blockedRoute = isAdBlockedRoute();
 
   useEffect(() => {
     let isMounted = true;
@@ -34,6 +57,7 @@ export function AdPlacement({ placement, className }: AdPlacementProps) {
   useEffect(() => {
     if (
       !settings
+      || blockedRoute
       || settings.status !== 'active'
       || !settings.placements?.[placement]
       || !settings.adsensePublisherId
@@ -49,9 +73,9 @@ export function AdPlacement({ placement, className }: AdPlacementProps) {
     } catch {
       // Ad network script failures should not affect the app experience.
     }
-  }, [placement, settings]);
+  }, [blockedRoute, placement, settings]);
 
-  if (!settings || settings.status !== 'active' || !settings.placements?.[placement]) {
+  if (blockedRoute || !settings || settings.status !== 'active' || !settings.placements?.[placement]) {
     return null;
   }
 

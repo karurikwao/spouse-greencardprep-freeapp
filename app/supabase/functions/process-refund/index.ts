@@ -29,6 +29,17 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (Deno.env.get('LEGACY_PAID_EDGE_FUNCTIONS_ENABLED') !== 'true') {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: 'Legacy Stripe refunds are retired in the free app.',
+        error: 'FREE_APP_PAYMENT_RETIRED',
+      } as RefundResponse),
+      { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

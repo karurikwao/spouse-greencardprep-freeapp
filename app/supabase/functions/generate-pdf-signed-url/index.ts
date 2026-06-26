@@ -29,6 +29,17 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (Deno.env.get('LEGACY_PDF_EDGE_FUNCTION_ENABLED') !== 'true') {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'This legacy premium PDF edge function is retired. Use the free-app Flask PDF routes.',
+        code: 'FREE_APP_PDF_EDGE_RETIRED',
+      }),
+      { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     // Create Supabase client with auth
     const supabaseClient = createClient(

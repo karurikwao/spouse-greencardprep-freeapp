@@ -1,5 +1,6 @@
 import hashlib
 import html as html_tools
+import logging
 import os
 import re
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,7 @@ import requests
 
 PLUNK_SEND_URL = 'https://next-api.useplunk.com/v1/send'
 RESEND_SEND_URL = 'https://api.resend.com/emails'
+logger = logging.getLogger(__name__)
 
 PLAN_LABELS = {
     'monthly': 'Robin Credit Pack',
@@ -117,8 +119,8 @@ def send_email(
     api_key = resend_key if provider == 'resend' else plunk_key
 
     if not api_key:
-        print(f'[DEV] Email skipped: RESEND_API_KEY/PLUNK_SECRET_KEY is not configured for "{subject}" to {to_email}')
-        return {'success': True, 'skipped': True}
+        logger.warning('Email skipped because provider key is missing: provider=%s subject=%s', provider, _clean_subject(subject))
+        return {'success': True, 'skipped': True, 'provider': provider}
 
     if provider == 'resend':
         return _send_resend_email(
@@ -174,16 +176,16 @@ def _send_plunk_email(
     try:
         response = requests.post(send_url, json=payload, headers=headers, timeout=timeout_seconds)
         if response.status_code >= 400:
-            print(f'Plunk email failed ({response.status_code}) for "{subject}": {response.text[:500]}')
-            return {'success': False, 'error': response.text[:500], 'status_code': response.status_code}
+            logger.warning('Plunk email failed: status=%s subject=%s', response.status_code, _clean_subject(subject))
+            return {'success': False, 'error': response.text[:500], 'status_code': response.status_code, 'provider': 'plunk'}
 
         data = response.json()
         emails = (data.get('data') or {}).get('emails') or []
         email_id = emails[0].get('email') if emails and isinstance(emails[0], dict) else None
         return {'success': True, 'id': email_id, 'provider': 'plunk'}
     except requests.RequestException as exc:
-        print(f'Plunk email request failed for "{subject}": {exc}')
-        return {'success': False, 'error': str(exc)}
+        logger.warning('Plunk email request failed: subject=%s error=%s', _clean_subject(subject), type(exc).__name__)
+        return {'success': False, 'error': str(exc), 'provider': 'plunk'}
 
 
 def _send_resend_email(
@@ -218,14 +220,14 @@ def _send_resend_email(
     try:
         response = requests.post(send_url, json=payload, headers=headers, timeout=timeout_seconds)
         if response.status_code >= 400:
-            print(f'Resend email failed ({response.status_code}) for "{subject}": {response.text[:500]}')
-            return {'success': False, 'error': response.text[:500], 'status_code': response.status_code}
+            logger.warning('Resend email failed: status=%s subject=%s', response.status_code, _clean_subject(subject))
+            return {'success': False, 'error': response.text[:500], 'status_code': response.status_code, 'provider': 'resend'}
 
         data = response.json()
         return {'success': True, 'id': data.get('id'), 'provider': 'resend'}
     except requests.RequestException as exc:
-        print(f'Resend email request failed for "{subject}": {exc}')
-        return {'success': False, 'error': str(exc)}
+        logger.warning('Resend email request failed: subject=%s error=%s', _clean_subject(subject), type(exc).__name__)
+        return {'success': False, 'error': str(exc), 'provider': 'resend'}
 
 
 def send_welcome_email(to_email: str, first_name: Optional[str] = None) -> Dict[str, object]:

@@ -263,6 +263,7 @@ def _normalize_robin_pack(value: Any, fallback: dict[str, Any]) -> dict[str, Any
 
 def normalize_robin_usage_settings(value: Any = None) -> dict[str, Any]:
     raw = value if isinstance(value, dict) else {}
+    processor_approved = os.getenv('ROBIN_CREDIT_PACKS_APPROVED', '').strip().lower() in {'1', 'true', 'yes', 'approved'}
     default_packs_by_id = {pack['id']: pack for pack in ROBIN_PACK_DEFAULTS}
     incoming_packs = raw.get('paidPacks') if isinstance(raw.get('paidPacks'), list) else ROBIN_PACK_DEFAULTS
 
@@ -281,7 +282,7 @@ def normalize_robin_usage_settings(value: Any = None) -> dict[str, Any]:
         'pauseMessage': str(raw.get('pauseMessage') or 'Robin is temporarily paused while we tune the free app experience. Please try again soon.').strip()[:500],
         'freeMessagesRollover': False,
         'paidMessagesRollover': bool(raw.get('paidMessagesRollover', True)),
-        'paidCreditPacksEnabled': bool(raw.get('paidCreditPacksEnabled', False)),
+        'paidCreditPacksEnabled': bool(raw.get('paidCreditPacksEnabled', False)) and processor_approved,
         'creditPacksUnavailableMessage': str(
             raw.get('creditPacksUnavailableMessage')
             or 'Extra Robin message packs are not available yet. Daily free messages refresh automatically each day.'

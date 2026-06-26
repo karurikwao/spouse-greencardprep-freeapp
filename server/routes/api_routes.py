@@ -2,8 +2,10 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import os
 import re
+import time
 import uuid
 from urllib.parse import urlparse
 from flask import Blueprint, request, jsonify, redirect, Response
@@ -23,6 +25,7 @@ from admin_settings import (
     saved_welcome_message_config,
 )
 from email_service import (
+    send_email,
     send_dashboard_message_email,
     send_refund_alert_admin_email,
     send_support_reply_email,
@@ -43,8 +46,12 @@ from support_service import (
 )
 from routes.ai_routes import (
     _build_support_messages,
+    _call_openai_compatible,
+    _call_provider,
     _call_provider_with_fallback,
     _default_model_for_provider,
+    _normalize_minimax_api_key,
+    _normalize_minimax_base_url,
     _normalize_provider_id,
     _openai_compatible_provider,
     _normalize_support_response,
@@ -54,6 +61,7 @@ from routes.ai_routes import (
 )
 
 api_bp = Blueprint('api', __name__)
+logger = logging.getLogger(__name__)
 
 
 RETIRED_FREE_APP_RPC_FUNCTIONS = {
@@ -709,9 +717,16 @@ def _create_dashboard_message(user_id, title, message, metadata=None, send_email
     ))
     if send_email and user_row.get('email'):
         try:
-            send_dashboard_message_email(user_row['email'], title, message, None, str(notification_id or user_id))
-        except Exception:
-            pass
+            email_result = send_dashboard_message_email(user_row['email'], title, message, None, str(notification_id or user_id))
+            if isinstance(email_result, dict) and not email_result.get('success', True):
+                logger.warning(
+                    'Dashboard message email failed for notification %s: provider=%s status=%s',
+                    notification_id or user_id,
+                    email_result.get('provider') or 'unknown',
+                    email_result.get('status_code') or 'unknown',
+                )
+        except Exception as exc:
+            logger.exception('Dashboard message email exception for notification %s: %s', notification_id or user_id, exc)
     return True
 
 
@@ -1720,6 +1735,48 @@ def admin_system_status():
     })
 
 
+@api_bp.route('/admin/email-test', methods=['POST'])
+@require_admin
+def admin_email_test_endpoint():
+    user = request.current_user
+    data = request.get_json() or {}
+    to_email = str(data.get('email') or user.get('email') or '').strip()
+    if not to_email or '@' not in to_email:
+        return jsonify({'error': 'A valid test email recipient is required.'}), 400
+
+    result = send_email(
+        to_email,
+        'Spouse Interview email test',
+        (
+            '<div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">'
+            '<h1 style="font-size: 20px;">Email test successful</h1>'
+            '<p>Your Spouse Interview admin email provider is able to send messages.</p>'
+            '</div>'
+        ),
+        'Email test successful. Your Spouse Interview admin email provider is able to send messages.',
+        tags=[{'name': 'category', 'value': 'admin_email_test'}],
+        idempotency_key=f"admin-email-test-{user.get('id')}-{int(time.time())}",
+    )
+    if not isinstance(result, dict) or not result.get('success'):
+        logger.warning(
+            'Admin email test failed: provider=%s status=%s',
+            (result or {}).get('provider') if isinstance(result, dict) else 'unknown',
+            (result or {}).get('status_code') if isinstance(result, dict) else 'unknown',
+        )
+        return jsonify({
+            'success': False,
+            'error': 'Email provider rejected the test message.',
+            'provider': (result or {}).get('provider') if isinstance(result, dict) else None,
+            'statusCode': (result or {}).get('status_code') if isinstance(result, dict) else None,
+        }), 502
+    return jsonify({
+        'success': True,
+        'provider': result.get('provider') or 'dev',
+        'skipped': bool(result.get('skipped')),
+        'messageId': result.get('id'),
+    })
+
+
 @api_bp.route('/admin/ai-settings', methods=['GET', 'POST'])
 @require_admin
 def admin_ai_settings_endpoint():
@@ -1841,8 +1898,8 @@ def _provider_model_endpoint(provider_id, incoming):
         return '', api_key or os.getenv('ANTHROPIC_API_KEY', ''), default_model
     if provider_id == 'minimax':
         return (
-            base_url or os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1'),
-            api_key or os.getenv('MINIMAX_API_KEY', ''),
+            _normalize_minimax_base_url(base_url or os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1')),
+            _normalize_minimax_api_key(api_key or os.getenv('MINIMAX_API_KEY', '')),
             default_model or os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3'),
         )
     return base_url, api_key, default_model
@@ -1860,6 +1917,23 @@ def _normalize_model_list(payload, default_model=''):
     if default_model and default_model not in models:
         models.insert(0, default_model)
     return models[:200]
+
+
+def _admin_provider_test_error(exc):
+    status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+    text = str(getattr(getattr(exc, 'response', None), 'text', '') or str(exc))
+    lowered = text.lower()
+    if status_code in {401, 403} or 'unauthorized' in lowered or 'invalid api key' in lowered:
+        return 'auth_failed', 'The provider rejected the API key or account access.'
+    if status_code == 404 or 'model' in lowered and 'not found' in lowered:
+        return 'model_not_found', 'The provider could not find or use this model.'
+    if status_code == 429 or 'rate limit' in lowered or 'quota' in lowered:
+        return 'rate_limited', 'The provider rate limit or quota was reached.'
+    if 'timeout' in lowered or 'timed out' in lowered:
+        return 'timeout', 'The provider test timed out.'
+    if status_code and status_code >= 500:
+        return 'provider_unavailable', 'The provider is temporarily unavailable.'
+    return 'provider_error', 'The provider test failed. Check the key, base URL, and model.'
 
 
 MINIMAX_MODEL_CATALOG = [
@@ -1916,6 +1990,73 @@ def admin_ai_provider_models_endpoint():
     return jsonify({'success': True, 'provider': provider_id, 'models': models})
 
 
+@api_bp.route('/admin/ai-provider-test', methods=['POST'])
+@require_admin
+def admin_ai_provider_test_endpoint():
+    data = request.get_json() or {}
+    provider_id = _normalize_provider_id(data.get('provider') or data.get('providerId'))
+    if not provider_id:
+        return jsonify({'error': 'Provider is required.'}), 400
+
+    incoming = data.get('providerConfig') if isinstance(data.get('providerConfig'), dict) else {}
+    base_url, api_key, default_model = _provider_model_endpoint(provider_id, incoming)
+    model = str(data.get('model') or default_model or '').strip()
+    if not model:
+        return jsonify({'error': 'Default model is required before testing this provider.'}), 400
+
+    messages = [
+        {
+            'role': 'system',
+            'content': 'You are Robin, a concise USCIS marriage interview practice helper. Answer directly in one sentence.',
+        },
+        {
+            'role': 'user',
+            'content': 'Reply with a short confirmation that this model is working for Robin.',
+        },
+    ]
+
+    started = time.perf_counter()
+    try:
+        if provider_id in {'unified', 'minimax'} or _openai_compatible_provider(provider_id):
+            if not api_key or not base_url:
+                return jsonify({
+                    'success': False,
+                    'provider': provider_id,
+                    'model': model,
+                    'errorCode': 'provider_not_configured',
+                    'userMessage': 'Provider key and base URL are required before testing.',
+                }), 400
+            text = _call_openai_compatible(base_url, api_key, model, messages, timeout_seconds=20)
+        else:
+            text = _call_provider(provider_id, model, messages, timeout_seconds=20)
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        return jsonify({
+            'success': True,
+            'provider': provider_id,
+            'model': model,
+            'latencyMs': latency_ms,
+            'preview': str(text or '').strip()[:500],
+        })
+    except Exception as exc:
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        code, user_message = _admin_provider_test_error(exc)
+        logger.warning(
+            'AI provider test failed: provider=%s model=%s code=%s latency_ms=%s',
+            provider_id,
+            model,
+            code,
+            latency_ms,
+        )
+        return jsonify({
+            'success': False,
+            'provider': provider_id,
+            'model': model,
+            'latencyMs': latency_ms,
+            'errorCode': code,
+            'userMessage': user_message,
+        }), 502
+
+
 @api_bp.route('/admin/lawyer-directory', methods=['GET', 'POST'])
 @require_admin
 def admin_lawyer_directory_endpoint():
@@ -1941,8 +2082,8 @@ def admin_welcome_messages_endpoint():
         'sendEmail': True,
         'signupTitle': 'Welcome to Spouse Interview',
         'signupMessage': 'Your free account is ready. Start with your dashboard, build your timeline, and save questions for later review.',
-        'upgradeTitle': 'Premium access unlocked',
-        'upgradeMessage': 'Thank you for upgrading. Your premium downloads, partner sync, and Robin practice access are now available in your dashboard.',
+        'upgradeTitle': 'Extra Robin access updated',
+        'upgradeMessage': 'Your Robin message access has been updated. Daily free messages still refresh automatically from your dashboard.',
     }
     current = {**defaults, **(saved_welcome_message_config() or {})}
     if request.method == 'GET':
@@ -2095,7 +2236,13 @@ def track_pdf_download_offer_event():
             ),
         )
     except Exception as e:
-        print(f"PDF offer analytics storage unavailable: {e}")
+        logger.warning(
+            'PDF offer analytics storage unavailable: offer_id=%s source=%s event_type=%s error=%s',
+            offer_id,
+            source,
+            event_type,
+            type(e).__name__,
+        )
         return jsonify({'success': True, 'stored': False}), 202
 
     return jsonify({'success': True, 'stored': True})
@@ -3787,8 +3934,11 @@ def publish_due_admin_broadcasts():
 @api_bp.route('/broadcasts/publish-due', methods=['POST'])
 @require_auth
 def publish_due_user_broadcasts():
-    rows, total = _publish_due_broadcast_rows()
-    return jsonify({'success': True, 'published': len(rows), 'sentCount': total})
+    return jsonify({
+        'success': False,
+        'code': 'ADMIN_REQUIRED',
+        'error': 'Scheduled broadcast publishing is restricted to admins.',
+    }), 403
 
 
 @api_bp.route('/notifications/<notification_id>/events', methods=['POST'])

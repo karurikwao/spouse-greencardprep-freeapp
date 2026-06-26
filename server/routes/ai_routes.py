@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import re
 import uuid
 import requests as http_requests
@@ -18,6 +19,7 @@ from support_service import (
 )
 
 ai_bp = Blueprint('ai', __name__)
+logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
@@ -198,6 +200,14 @@ def _call_role_provider_with_fallback(role, preferred_provider, preferred_model,
         try:
             return _call_provider(provider, model, messages, timeout_seconds), provider, model, index > 0, errors
         except Exception as exc:
+            logger.warning(
+                'AI role provider failed: role=%s provider=%s model=%s timeout_seconds=%s error=%s',
+                role,
+                provider,
+                model,
+                timeout_seconds,
+                type(exc).__name__,
+            )
             errors.append({
                 'provider': provider,
                 'model': model,
@@ -212,6 +222,14 @@ def _call_role_provider_with_fallback(role, preferred_provider, preferred_model,
         try:
             return _call_provider(provider, model, messages, timeout_seconds), provider, model, True, errors
         except Exception as exc:
+            logger.warning(
+                'AI role fallback provider failed: role=%s provider=%s model=%s timeout_seconds=%s error=%s',
+                role,
+                provider,
+                model,
+                timeout_seconds,
+                type(exc).__name__,
+            )
             errors.append({
                 'provider': provider,
                 'model': model,
@@ -255,8 +273,8 @@ def ai_interview_turn():
             'error': {
                 'code': 'PLAN_LIMIT_REACHED',
                 'message': limits.get('reason', 'Usage limit reached'),
-                'userMessage': limits.get('reason', 'Usage limit reached. Upgrade for unlimited practice.'),
-                'upgradeRecommended': True,
+                'userMessage': limits.get('reason', 'Usage limit reached. Daily free chats refresh automatically.'),
+                'upgradeRecommended': False,
             },
         }), 429
 
@@ -276,11 +294,12 @@ def ai_interview_turn():
             data.get('answer') or data.get('question') or data.get('questionText') or '',
         )
     except Exception as e:
+        logger.warning('AI interview provider error: provider=%s model=%s error=%s', provider, model, type(e).__name__)
         return jsonify({
             'success': False,
             'error': {
                 'code': 'PROVIDER_ERROR',
-                'message': f'AI provider error: {str(e)}',
+                'message': 'AI provider error',
                 'userMessage': 'AI interview is temporarily unavailable. Please try again or choose another provider.',
             },
         }), 500
@@ -448,8 +467,8 @@ def dashboard_agent():
             'error': {
                 'code': 'PLAN_LIMIT_REACHED',
                 'message': limits.get('reason', 'Usage limit reached'),
-                'userMessage': limits.get('reason', 'Usage limit reached. Upgrade for more AI help.'),
-                'upgradeRecommended': True,
+                'userMessage': limits.get('reason', 'Usage limit reached. Daily free chats refresh automatically.'),
+                'upgradeRecommended': False,
             },
         }), 429
 
@@ -503,11 +522,12 @@ def dashboard_agent():
             question,
         )
     except Exception as e:
+        logger.warning('Robin provider error: provider=%s model=%s error=%s', provider, model, type(e).__name__)
         return jsonify({
             'success': False,
             'error': {
                 'code': 'PROVIDER_ERROR',
-                'message': f'AI provider error: {str(e)}',
+                'message': 'AI provider error',
                 'userMessage': 'Robin is temporarily unavailable. Please try again shortly.',
             },
         }), 500
@@ -1505,6 +1525,13 @@ def _call_provider_with_fallback(preferred_provider, preferred_model, messages, 
         try:
             return _call_provider(provider, model, messages, timeout_seconds), provider, model, provider != preferred_provider, errors
         except Exception as exc:
+            logger.warning(
+                'AI provider fallback failed: provider=%s model=%s timeout_seconds=%s error=%s',
+                provider,
+                model,
+                timeout_seconds,
+                type(exc).__name__,
+            )
             errors.append({
                 'provider': provider,
                 'timeoutSeconds': timeout_seconds,
