@@ -1249,13 +1249,13 @@ def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=Non
     limit = max(1, min(limit, 1000))
 
     suspicious_filters = (
-        "answer ILIKE 'The user %'",
-        "answer ILIKE 'User %'",
-        "answer ILIKE 'Analysis:%'",
-        "answer ILIKE 'Reasoning:%'",
-        "answer ILIKE 'Thought:%'",
-        "answer ILIKE 'Thinking:%'",
-        "answer ILIKE 'Plan:%'",
+        "answer ILIKE 'The user %%'",
+        "answer ILIKE 'User %%'",
+        "answer ILIKE 'Analysis:%%'",
+        "answer ILIKE 'Reasoning:%%'",
+        "answer ILIKE 'Thought:%%'",
+        "answer ILIKE 'Thinking:%%'",
+        "answer ILIKE 'Plan:%%'",
         "answer ILIKE '%% I should %%'",
         "answer ILIKE '%% I can offer %%'",
         "answer ILIKE '%%Let me give %%'",
