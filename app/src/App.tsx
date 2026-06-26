@@ -1341,8 +1341,7 @@ function RobinFloatingLauncher({ onOpenRobin }: { onOpenRobin: () => void }) {
       aria-label="Ask Robin"
     >
       <Bot className="mr-2 h-5 w-5" />
-      <span className="hidden sm:inline">Ask Robin</span>
-      <span className="sm:hidden">Robin</span>
+      <span>Ask Robin</span>
     </Button>
   );
 }

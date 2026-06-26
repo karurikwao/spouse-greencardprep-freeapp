@@ -1152,17 +1152,38 @@ def _strip_robin_meta_preamble(answer):
     text = str(answer or '').strip()
     if not text:
         return ''
+    direct_start = re.search(
+        r'(?is)\b('
+        r'hi(?: there)?[!.:,]\s+|'
+        r'hello[!.:,]\s+|'
+        r'great[!.:,]\s+|'
+        r'sure[!.:,]\s+|'
+        r'absolutely[!.:,]\s+|'
+        r'yes[!.:,]\s+|'
+        r'practice question\s*:'
+        r')',
+        text,
+    )
+    if direct_start and direct_start.start() > 0:
+        leading = text[:direct_start.start()].lower()
+        if any(marker in leading for marker in ('the user ', 'i should', 'i can offer', 'let me ', 'analysis:', 'reasoning:')):
+            text = text[direct_start.start():].strip()
+
     sentence_pattern = re.compile(r'(?<=[.!?])\s+')
     sentences = sentence_pattern.split(text)
     meta_patterns = (
         r'^(?:the\s+)?user\s+(?:is|asked|asks|wants|needs|seems|has|greeted|greeting)\b',
         r'^i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
         r'^we\s+(?:should|need\s+to|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
+        r'\bi\s+should\b',
+        r'\bi\s+can\s+offer\b',
+        r'^since\s+there(?:\s+is|\'s)\b.*\bi\s+should\b',
+        r'^let\s+me\s+(?:give|provide|answer|explain|start)\b',
         r'^(?:analysis|reasoning|thought|thinking|plan)\s*:',
-        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice)\b',
+        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice|memory bank yet|lawyer directory)\b',
     )
     drop_until = 0
-    for index, sentence in enumerate(sentences[:6]):
+    for index, sentence in enumerate(sentences[:10]):
         normalized = sentence.strip().lower()
         if any(re.search(pattern, normalized) for pattern in meta_patterns):
             drop_until = index + 1
