@@ -2932,7 +2932,7 @@ def admin_user_activity(user_id):
                 SELECT
                     'robin'::text AS kind,
                     'Robin usage'::text AS title,
-                    format('%s turns across %s sessions', total_turns, sessions_count)::text AS detail,
+                    format('%%s turns across %%s sessions', total_turns, sessions_count)::text AS detail,
                     updated_at AS occurred_at,
                     jsonb_build_object(
                         'usageDate', usage_date::text,
@@ -3154,7 +3154,7 @@ def admin_user_activity_csv(user_id):
             SELECT
                 'robin'::text AS kind,
                 'Robin usage'::text AS title,
-                format('%s turns across %s sessions', total_turns, sessions_count)::text AS detail,
+                format('%%s turns across %%s sessions', total_turns, sessions_count)::text AS detail,
                 updated_at AS occurred_at,
                 jsonb_build_object(
                     'usageDate', usage_date::text,
