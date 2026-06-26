@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import uuid
 import requests as http_requests
 from flask import Blueprint, request, jsonify
@@ -601,6 +602,23 @@ def _saved_provider_value(provider, key, fallback=''):
     return fallback
 
 
+def _normalize_minimax_base_url(value):
+    text = str(value or '').strip().rstrip('/')
+    if not text:
+        return MINIMAX_BASE_URL
+    if 'api.minimax.io' in text and not text.endswith('/v1'):
+        return 'https://api.minimax.io/v1'
+    return text
+
+
+def _normalize_minimax_api_key(value):
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    match = re.search(r'sk-[A-Za-z0-9_-]+', text)
+    return match.group(0) if match else text
+
+
 def _openai_compatible_provider_ids():
     provider_ids = ['unified', 'minimax']
     for provider in _custom_openai_compatible_providers():
@@ -641,11 +659,13 @@ def _openai_compatible_provider(provider):
 
     if provider_id == 'minimax':
         saved = _saved_provider_config('minimax')
+        base_url = saved.get('baseUrl') or saved.get('base_url') or _env_value('MINIMAX_BASE_URL') or MINIMAX_BASE_URL
+        api_key = saved.get('apiKey') or saved.get('api_key') or _env_value('MINIMAX_API_KEY') or MINIMAX_API_KEY
         return {
             'provider': 'minimax',
             'label': 'MiniMax',
-            'base_url': saved.get('baseUrl') or saved.get('base_url') or _env_value('MINIMAX_BASE_URL') or MINIMAX_BASE_URL,
-            'api_key': saved.get('apiKey') or saved.get('api_key') or _env_value('MINIMAX_API_KEY') or MINIMAX_API_KEY,
+            'base_url': _normalize_minimax_base_url(base_url),
+            'api_key': _normalize_minimax_api_key(api_key),
             'default_model': saved.get('defaultModel') or saved.get('default_model') or _env_value('MINIMAX_DEFAULT_MODEL') or MINIMAX_DEFAULT_MODEL,
         }
 
@@ -1575,14 +1595,35 @@ def _call_openai_compatible(base_url, api_key, model, messages, timeout_seconds=
     if not base_url:
         raise ValueError('OpenAI-compatible base URL not configured')
 
+    payload = {'model': model, 'messages': messages, 'max_tokens': 700, 'temperature': 0.25}
+    if 'api.minimax.io' in str(base_url):
+        payload.pop('max_tokens', None)
+        payload['max_completion_tokens'] = 700
+
     resp = http_requests.post(
         f'{base_url.rstrip("/")}/chat/completions',
         headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-        json={'model': model, 'messages': messages, 'max_tokens': 700, 'temperature': 0.25},
+        json=payload,
         timeout=_clamp_timeout_seconds(timeout_seconds, 90)
     )
-    resp.raise_for_status()
-    return resp.json()['choices'][0]['message']['content']
+    try:
+        resp.raise_for_status()
+    except http_requests.HTTPError as exc:
+        detail = ''
+        try:
+            error_body = resp.json()
+            error_value = error_body.get('error') if isinstance(error_body, dict) else None
+            if isinstance(error_value, dict):
+                detail = error_value.get('message') or error_value.get('code') or ''
+            elif isinstance(error_value, str):
+                detail = error_value
+            if isinstance(error_body, dict):
+                detail = detail or str(error_body.get('message') or '')
+        except Exception:
+            detail = resp.text[:240]
+        raise ValueError(detail or str(exc)) from exc
+    data = resp.json()
+    return data['choices'][0]['message']['content']
 
 
 def _call_openai_compatible_provider(provider_config, model, messages, timeout_seconds=None):

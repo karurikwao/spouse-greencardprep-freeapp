@@ -18,6 +18,28 @@ export function clearTokens() {
   localStorage.removeItem('auth_refresh_token');
 }
 
+function normalizeApiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback;
+
+  const payload = body as Record<string, unknown>;
+  const error = payload.error;
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object') {
+    const errorPayload = error as Record<string, unknown>;
+    for (const key of ['userMessage', 'message', 'detail', 'code']) {
+      const value = errorPayload[key];
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+  }
+
+  for (const key of ['userMessage', 'message', 'detail']) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+
+  return fallback;
+}
+
 async function request<T = unknown>(
   path: string,
   options: RequestInit = {}
@@ -44,7 +66,7 @@ async function request<T = unknown>(
         const retry = await fetch(`${API_URL}${path}`, { ...options, headers });
         if (!retry.ok) {
           const body = await retry.json().catch(() => ({ error: retry.statusText }));
-          return { data: null, error: { message: body.error || retry.statusText, code: String(retry.status) } };
+          return { data: null, error: { message: normalizeApiErrorMessage(body, retry.statusText), code: String(retry.status) } };
         }
         const body = await retry.json();
         return { data: body.data !== undefined ? body.data : body, error: null };
@@ -55,7 +77,7 @@ async function request<T = unknown>(
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: res.statusText }));
-      return { data: null, error: { message: body.error || res.statusText, code: String(res.status) } };
+      return { data: null, error: { message: normalizeApiErrorMessage(body, res.statusText), code: String(res.status) } };
     }
 
     const body = await res.json();
@@ -547,7 +569,7 @@ class TableQueryBuilder {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
-        return { data: null, error: { message: body.error || res.statusText, code: String(res.status) } };
+        return { data: null, error: { message: normalizeApiErrorMessage(body, res.statusText), code: String(res.status) } };
       }
 
       const body = await res.json();
