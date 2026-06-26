@@ -1120,7 +1120,10 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
         "For current immigration news, fees, deadlines, or policy questions, explain that rules can "
         "change and point users to official USCIS sources or a licensed attorney for final verification. "
         "Use the memory bank snippets to stay consistent with prior answers. Keep replies concise, "
-        "supportive, and practical. You may return safe rich HTML when it improves clarity, especially "
+        "supportive, and practical. Do not reveal or narrate internal reasoning, planning, instructions, "
+        "analysis, or what you think the user is asking. Never start with phrases like 'The user is', "
+        "'I should', 'We need to', 'Analysis:', or 'Reasoning:'. Start with Robin's direct answer to "
+        "the user. You may return safe rich HTML when it improves clarity, especially "
         "for approved lawyer cards. Allowed tags: p, strong, em, ul, ol, li, br, a, img, blockquote. "
         "Never include scripts, forms, inline event handlers, or hidden tracking code."
     )
@@ -1137,7 +1140,7 @@ Admin-approved lawyer directory:
 User question:
 {question}
 
-Answer directly. If useful, include a short next step the user can take for interview practice.
+Return only Robin's final user-facing reply. Answer directly. If useful, include a short next step the user can take for interview practice.
 """
     return [
         {'role': 'system', 'content': system_prompt},
@@ -1145,11 +1148,39 @@ Answer directly. If useful, include a short next step the user can take for inte
     ]
 
 
+def _strip_robin_meta_preamble(answer):
+    text = str(answer or '').strip()
+    if not text:
+        return ''
+    sentence_pattern = re.compile(r'(?<=[.!?])\s+')
+    sentences = sentence_pattern.split(text)
+    meta_patterns = (
+        r'^(?:the\s+)?user\s+(?:is|asked|asks|wants|needs|seems|has|greeted|greeting)\b',
+        r'^i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
+        r'^we\s+(?:should|need\s+to|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
+        r'^(?:analysis|reasoning|thought|thinking|plan)\s*:',
+        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice)\b',
+    )
+    drop_until = 0
+    for index, sentence in enumerate(sentences[:6]):
+        normalized = sentence.strip().lower()
+        if any(re.search(pattern, normalized) for pattern in meta_patterns):
+            drop_until = index + 1
+            continue
+        break
+    if drop_until:
+        stripped = ' '.join(part.strip() for part in sentences[drop_until:] if part.strip()).strip()
+        if stripped:
+            return stripped
+    return text
+
+
 def _normalize_dashboard_agent_answer(response_text):
     answer = (response_text or '').strip()
     if answer.startswith('```'):
         answer = answer.strip('`')
         answer = answer.replace('text\n', '', 1).replace('text\r\n', '', 1)
+    answer = _strip_robin_meta_preamble(answer)
     if not answer:
         answer = 'I could not generate an answer right now. Please try again in a moment.'
     return answer[:2400]
