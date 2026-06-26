@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect, createContext, useContext, type ElementType, useMemo } from 'react';
 import { 
   Search, 
+  Bot,
   BookOpen, 
   Heart, 
   Shield, 
@@ -61,6 +62,7 @@ import {
   ChevronRight,
   LogIn,
   UserPlus,
+  Send,
   // BookmarkCheck - available for future use
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -124,6 +126,7 @@ import { VerificationCodeInjector } from '@/components/verification/Verification
 import { useCaptureReferralOnMount } from '@/hooks/useCaptureReferralOnMount';
 // Note: trackPDFDownload is now handled internally by SecurePDFDownload component
 import { SecurePDFDownload } from '@/components/paywall';
+import { saveRobinDraft } from '@/lib/robinDraft';
 import './App.css';
 
 const AdminPanel = lazy(() => import('@/components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
@@ -723,8 +726,18 @@ function Navigation({
   );
 }
 
-function Hero({ onSignupClick }: { onSignupClick: () => void }) {
+function Hero({ onSignupClick, onOpenRobin }: { onSignupClick: () => void; onOpenRobin: (draft?: string) => void }) {
+  const [robinDraft, setRobinDraft] = useState('');
   const scrollToTopics = () => document.getElementById('topics')?.scrollIntoView({ behavior: 'smooth' });
+  const robinPromptChips = [
+    'Practice me for the interview',
+    'What evidence should we bring?',
+    'Quiz us on home-life questions',
+  ];
+
+  const submitRobinDraft = () => {
+    onOpenRobin(robinDraft || 'Help me start practicing for my USCIS marriage interview.');
+  };
 
   return (
     <section className="hero-section relative min-h-screen flex items-center overflow-hidden">
@@ -756,6 +769,49 @@ function Hero({ onSignupClick }: { onSignupClick: () => void }) {
             Practice USCIS marriage interview questions with your partner. Access 1,200+ questions, 
             sample answers, progress tracking, and free PDF downloads to prepare for your green card interview together.
           </p>
+
+          <div className="mb-7 overflow-hidden rounded-2xl border border-white/25 bg-white/15 p-3 shadow-2xl shadow-slate-950/20 backdrop-blur-md">
+            <div className="mb-2 flex items-center gap-2 text-sm font-extrabold text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/20">
+                <Bot className="h-5 w-5" />
+              </span>
+              Ask Robin, your interview practice coach
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={robinDraft}
+                onChange={(event) => setRobinDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitRobinDraft();
+                  }
+                }}
+                placeholder="Ask Robin what to practice, how to answer, or what evidence to review..."
+                className="h-12 border-white/30 bg-white text-slate-950 font-semibold placeholder:text-slate-500"
+              />
+              <Button
+                type="button"
+                onClick={submitRobinDraft}
+                className="h-12 shrink-0 bg-cyan-400 px-5 font-extrabold text-slate-950 shadow-lg shadow-slate-950/20 hover:bg-cyan-300"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Ask Robin
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {robinPromptChips.map(prompt => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => onOpenRobin(prompt)}
+                  className="rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-white/25"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             <Button 
@@ -1254,6 +1310,21 @@ interface TimelineBuilderSectionProps {
   isAuthenticated?: boolean;
   onRequireSignup?: () => void;
   onOpenDedicated?: () => void;
+}
+
+function RobinFloatingLauncher({ onOpenRobin }: { onOpenRobin: () => void }) {
+  return (
+    <Button
+      type="button"
+      onClick={onOpenRobin}
+      className="fixed bottom-5 right-4 z-40 rounded-full bg-gradient-to-r from-indigo-700 to-cyan-700 px-4 py-6 font-extrabold text-white shadow-2xl shadow-indigo-500/30 hover:from-indigo-800 hover:to-cyan-800 sm:right-6"
+      aria-label="Ask Robin"
+    >
+      <Bot className="mr-2 h-5 w-5" />
+      <span className="hidden sm:inline">Ask Robin</span>
+      <span className="sm:hidden">Robin</span>
+    </Button>
+  );
 }
 
 function TimelineBuilderSection({
@@ -1998,6 +2069,11 @@ function HomePage({
     setShowAuthModal(true);
   }
 
+  function openRobin(draft?: string) {
+    saveRobinDraft(draft);
+    navigate('robin');
+  }
+
   function canUseGuestFeature(featureKey: string, limit = 3) {
     if (isAuthenticated) return true;
     try {
@@ -2288,7 +2364,7 @@ function HomePage({
         <AnnouncementBanner placement="global.banner" />
       </div>
       
-      <Hero onSignupClick={() => openAuthModal('signup')} />
+      <Hero onSignupClick={() => openAuthModal('signup')} onOpenRobin={openRobin} />
       
       {/* Home Hero Announcements */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2306,6 +2382,35 @@ function HomePage({
         onViewDashboard={handleViewProgress}
         onViewSaved={handleViewSaved}
       />
+      <section className="bg-white py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-3xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-5 shadow-xl shadow-indigo-100/70">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-700 to-cyan-600 text-white shadow-lg shadow-indigo-200">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-indigo-700">Daily Robin practice</p>
+                  <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">Not sure where to start?</h2>
+                  <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-700">
+                    Robin can turn the topic list into a quick practice session, help you identify weak spots,
+                    and suggest evidence or relationship details to review with your spouse.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={() => openRobin('Help us choose what to practice first for our USCIS marriage interview.')}
+                className="w-fit bg-gradient-to-r from-indigo-700 to-cyan-700 font-extrabold text-white shadow-lg shadow-indigo-200 hover:from-indigo-800 hover:to-cyan-800"
+              >
+                <Bot className="mr-2 h-4 w-4" />
+                Start with Robin
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
       <TopicsSection 
         onPractice={(topic: Topic) => {
           const practiceTopic = normalizedTopics.find(t => t.id === topic.id);
@@ -2365,6 +2470,23 @@ function App() {
   const { page, navigate, questionSlug, inviteCode, topicSlug, situationSlug, clusterSlug, supportingSlug } = usePage();
   const appBackPage: Page = typeof window !== 'undefined' && localStorage.getItem('auth_token') ? 'dashboard' : 'home';
   const navigateToAppBack = () => navigate(appBackPage);
+  const openRobinWithDraft = (draft?: string) => {
+    saveRobinDraft(draft);
+    navigate('robin');
+  };
+  const showRobinLauncher = [
+    'home',
+    'dashboard',
+    'pdf-library',
+    'question',
+    'top-questions',
+    'question-database',
+    'interview-topics',
+    'topic',
+    'situation',
+    'pillar',
+    'supporting',
+  ].includes(page);
 
   return (
     <AuthProvider>
@@ -2379,7 +2501,7 @@ function App() {
               {page === 'dashboard' && <HomePage navigate={navigate} initialViewMode="dashboard" />}
               {page === 'messages' && <MessagesPage onBack={() => navigate('dashboard')} />}
               {page === 'robin' && <RobinPage onBack={() => navigate('dashboard')} />}
-              {page === 'pdf-library' && <PDFLibraryPage onBack={() => navigate('dashboard')} />}
+              {page === 'pdf-library' && <PDFLibraryPage onBack={() => navigate('dashboard')} onOpenRobin={openRobinWithDraft} />}
               {page === 'timeline-builder' && <RelationshipTimelinePage onBack={navigateToAppBack} />}
               {page === 'readiness' && <HomePage navigate={navigate} initialViewMode="readiness" />}
               {page === 'stress-review' && <HomePage navigate={navigate} initialViewMode="stress-review" />}
@@ -2388,6 +2510,7 @@ function App() {
                   questionSlug={questionSlug}
                   onBack={navigateToAppBack}
                   onPractice={() => navigate('ai-interview')}
+                  onAskRobin={openRobinWithDraft}
                 />
               )}
               {page === 'topic' && (
@@ -2427,6 +2550,10 @@ function App() {
               {page === 'reset-password' && <ResetPasswordPage />}
               {page === 'account' && <AccountSettingsPage />}
             </Suspense>
+
+            {showRobinLauncher && (
+              <RobinFloatingLauncher onOpenRobin={() => openRobinWithDraft('Help me practice for my USCIS marriage interview.')} />
+            )}
             
             {/* Verification code injection - body_end */}
             <VerificationCodeInjector placement="body_end" />

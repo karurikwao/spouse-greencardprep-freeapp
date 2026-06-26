@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  Bot,
   BookOpen,
   Download,
   FileText,
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 
 interface PDFLibraryPageProps {
   onBack: () => void;
+  onOpenRobin?: (draft?: string) => void;
 }
 
 const categoryAdvice: Record<string, string> = {
@@ -39,7 +41,7 @@ function getTopicDisplayTitle(title: string) {
   return title.split(':')[0].trim() || title;
 }
 
-export function PDFLibraryPage({ onBack }: PDFLibraryPageProps) {
+export function PDFLibraryPage({ onBack, onOpenRobin }: PDFLibraryPageProps) {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
@@ -118,6 +120,33 @@ export function PDFLibraryPage({ onBack }: PDFLibraryPageProps) {
         </section>
 
         <AdPlacement placement="pdf_library.inline" />
+
+        {onOpenRobin && (
+          <section className="overflow-hidden rounded-3xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-5 shadow-xl shadow-indigo-100/70">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-700 to-cyan-600 text-white shadow-lg shadow-indigo-200">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-indigo-700">Practice with Robin</p>
+                  <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">Turn a PDF into a quick practice session</h2>
+                  <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-700">
+                    Choose a topic pack, then ask Robin to quiz you on the same evidence, home-life, and relationship details.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={() => onOpenRobin('Help me choose a PDF topic and quiz me on it for my USCIS marriage interview.')}
+                className="w-fit bg-gradient-to-r from-indigo-700 to-cyan-700 font-extrabold text-white shadow-lg shadow-indigo-200 hover:from-indigo-800 hover:to-cyan-800"
+              >
+                <Bot className="mr-2 h-4 w-4" />
+                Ask Robin to quiz me
+              </Button>
+            </div>
+          </section>
+        )}
 
         <section className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="relative">
@@ -201,6 +230,17 @@ export function PDFLibraryPage({ onBack }: PDFLibraryPageProps) {
                     className="shrink-0 border-blue-200 bg-white font-extrabold text-blue-800 hover:border-blue-400 hover:bg-blue-50"
                   />
                 </div>
+                {onOpenRobin && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenRobin(`Quiz me on ${getTopicDisplayTitle(topic.title)} for our USCIS marriage interview.`)}
+                    className="w-full border-indigo-200 bg-white font-extrabold text-indigo-800 hover:bg-indigo-50"
+                  >
+                    <Bot className="mr-2 h-4 w-4" />
+                    Ask Robin to quiz this topic
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

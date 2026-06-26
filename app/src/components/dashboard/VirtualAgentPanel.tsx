@@ -28,6 +28,7 @@ import {
   loadDashboardAgentHistory,
   type DashboardAgentEntry,
 } from '@/lib/ai/dashboardAgent';
+import { consumeRobinDraft } from '@/lib/robinDraft';
 import { useSpeechDictation } from '@/hooks/useSpeechDictation';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,13 @@ export function VirtualAgentPanel({ className, mode = 'card', onOpenFullPage }: 
   const latestAnswerRef = useRef<HTMLDivElement | null>(null);
 
   const isPageMode = mode === 'page';
+
+  useEffect(() => {
+    const draft = consumeRobinDraft();
+    if (draft) {
+      setQuestion(current => current.trim() ? current : draft);
+    }
+  }, []);
 
   const appendSpeechTranscript = useCallback((transcript: string) => {
     setQuestion((current) => {

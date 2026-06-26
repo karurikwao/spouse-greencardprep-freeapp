@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle, ExternalLink, Lightbulb, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Bot, CheckCircle, ExternalLink, Lightbulb, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ interface SEOQuestionPageProps {
   questionSlug: string;
   onBack: () => void;
   onPractice: () => void;
+  onAskRobin?: (draft?: string) => void;
 }
 
 function slugifyQuestion(value: string) {
@@ -41,7 +42,7 @@ const relatedIconAccents = [
   'bg-gradient-to-br from-rose-600 to-pink-500 text-white',
 ];
 
-export function SEOQuestionPage({ questionSlug, onBack, onPractice }: SEOQuestionPageProps) {
+export function SEOQuestionPage({ questionSlug, onBack, onPractice, onAskRobin }: SEOQuestionPageProps) {
   const normalizedTopics = useMemo(() => normalizeAllTopics(topics), []);
 
   // Find the question from slug
@@ -172,7 +173,7 @@ export function SEOQuestionPage({ questionSlug, onBack, onPractice }: SEOQuestio
           <Card className="question-practice-cta overflow-hidden border-0 bg-gradient-to-br from-blue-800 via-violet-700 to-rose-600 text-white shadow-2xl shadow-blue-200">
             <div className="h-1.5 bg-gradient-to-r from-amber-300 via-orange-300 to-white/80" />
             <CardContent className="p-6 sm:p-7">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/30">
                     <BookOpen className="h-5 w-5" />
@@ -182,10 +183,22 @@ export function SEOQuestionPage({ questionSlug, onBack, onPractice }: SEOQuestio
                     Get access to all 1,200+ practice questions and track your progress
                   </p>
                 </div>
-                <Button onClick={onPractice} className="bg-white text-blue-950 font-extrabold shadow-lg shadow-blue-950/20 hover:bg-amber-50">
-                  Start Practicing
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                  <Button onClick={onPractice} className="bg-white text-blue-950 font-extrabold shadow-lg shadow-blue-950/20 hover:bg-amber-50">
+                    Start Practicing
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                  {onAskRobin && (
+                    <Button
+                      type="button"
+                      onClick={() => onAskRobin(`Help me practice this USCIS marriage interview question: ${question.prompt}`)}
+                      className="bg-cyan-300 text-slate-950 font-extrabold shadow-lg shadow-blue-950/20 hover:bg-cyan-200"
+                    >
+                      <Bot className="mr-2 h-4 w-4" />
+                      Ask Robin
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
