@@ -1256,11 +1256,11 @@ def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=Non
         "answer ILIKE 'Thought:%'",
         "answer ILIKE 'Thinking:%'",
         "answer ILIKE 'Plan:%'",
-        "answer ILIKE '% I should %'",
-        "answer ILIKE '% I can offer %'",
-        "answer ILIKE '%Let me give %'",
-        "answer ILIKE '%Let me provide %'",
-        "answer ILIKE '%Since there%I should%'",
+        "answer ILIKE '%% I should %%'",
+        "answer ILIKE '%% I can offer %%'",
+        "answer ILIKE '%%Let me give %%'",
+        "answer ILIKE '%%Let me provide %%'",
+        "answer ILIKE '%%Since there%%I should%%'",
     )
     params = []
     user_filter = ''
