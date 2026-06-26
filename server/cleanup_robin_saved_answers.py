@@ -23,6 +23,7 @@ def main():
         limit=args.limit,
         dry_run=not args.apply,
         user_id=args.user_id,
+        include_sample=args.show_sample,
     )
 
     mode = 'APPLY' if args.apply else 'DRY RUN'

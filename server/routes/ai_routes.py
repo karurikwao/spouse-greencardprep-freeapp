@@ -579,6 +579,7 @@ def cleanup_dashboard_agent_saved_answers():
         limit=data.get('limit') or 200,
         dry_run=_coerce_bool(dry_run, True),
         user_id=user_id,
+        include_sample=_coerce_bool(data.get('includeSample') or data.get('include_sample'), False),
     )
     return jsonify({'success': True, 'data': result})
 
@@ -1109,9 +1110,10 @@ def _lawyer_directory_prompt_block(lawyer_directory):
 def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_directory=None):
     memory_lines = []
     for item in recent_memory:
+        cleaned_memory_answer = _normalize_dashboard_agent_answer(item.get('answer', ''))
         memory_lines.append(
             f"- User asked: {item.get('question', '')[:220]}\n"
-            f"  Agent answered: {item.get('answer', '')[:420]}"
+            f"  Agent answered: {cleaned_memory_answer[:420]}"
         )
 
     context_text = ''
@@ -1197,7 +1199,7 @@ def _strip_robin_meta_preamble(answer):
         r'^since\s+there(?:\s+is|\'s)\b.*\bi\s+should\b',
         r'^let\s+me\s+(?:give|provide|answer|explain|start)\b',
         r'^(?:analysis|reasoning|thought|thinking|plan)\s*:',
-        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice|memory bank yet|lawyer directory)\b',
+        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice)\b',
     )
     drop_until = 0
     for index, sentence in enumerate(sentences[:10]):
@@ -1239,7 +1241,7 @@ def _coerce_bool(value, default=False):
     return default
 
 
-def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=None):
+def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=None, include_sample=False):
     try:
         limit = int(limit or 200)
     except Exception:
@@ -1258,8 +1260,7 @@ def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=Non
         "answer ILIKE '% I can offer %'",
         "answer ILIKE '%Let me give %'",
         "answer ILIKE '%Let me provide %'",
-        "answer ILIKE '%memory bank yet%'",
-        "answer ILIKE '%lawyer directory%'",
+        "answer ILIKE '%Since there%I should%'",
     )
     params = []
     user_filter = ''
@@ -1323,7 +1324,7 @@ def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=Non
                 'after': row.get('cleanedPreview'),
             }
             for row in cleaned[:10]
-        ],
+        ] if include_sample else [],
     }
 
 
