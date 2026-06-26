@@ -3,6 +3,7 @@ import json
 import re
 import uuid
 import requests as http_requests
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from auth import optional_auth, require_auth, require_admin
 import db
@@ -564,6 +565,22 @@ def dashboard_agent_history():
             'entries': [_serialize_dashboard_memory(row) for row in rows],
         },
     })
+
+
+@ai_bp.route('/dashboard-agent/cleanup-saved-answers', methods=['POST'])
+@require_admin
+def cleanup_dashboard_agent_saved_answers():
+    data = request.get_json(silent=True) or {}
+    dry_run = data.get('dryRun')
+    if dry_run is None:
+        dry_run = data.get('dry_run', True)
+    user_id = str(data.get('userId') or data.get('user_id') or '').strip() or None
+    result = _cleanup_dashboard_agent_memory_answers(
+        limit=data.get('limit') or 200,
+        dry_run=_coerce_bool(dry_run, True),
+        user_id=user_id,
+    )
+    return jsonify({'success': True, 'data': result})
 
 
 def _env_value(*names):
@@ -1207,6 +1224,109 @@ def _normalize_dashboard_agent_answer(response_text):
     return answer[:2400]
 
 
+def _coerce_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value).strip().lower()
+    if text in {'1', 'true', 'yes', 'y', 'on'}:
+        return True
+    if text in {'0', 'false', 'no', 'n', 'off'}:
+        return False
+    return default
+
+
+def _cleanup_dashboard_agent_memory_answers(limit=200, dry_run=True, user_id=None):
+    try:
+        limit = int(limit or 200)
+    except Exception:
+        limit = 200
+    limit = max(1, min(limit, 1000))
+
+    suspicious_filters = (
+        "answer ILIKE 'The user %'",
+        "answer ILIKE 'User %'",
+        "answer ILIKE 'Analysis:%'",
+        "answer ILIKE 'Reasoning:%'",
+        "answer ILIKE 'Thought:%'",
+        "answer ILIKE 'Thinking:%'",
+        "answer ILIKE 'Plan:%'",
+        "answer ILIKE '% I should %'",
+        "answer ILIKE '% I can offer %'",
+        "answer ILIKE '%Let me give %'",
+        "answer ILIKE '%Let me provide %'",
+        "answer ILIKE '%memory bank yet%'",
+        "answer ILIKE '%lawyer directory%'",
+    )
+    params = []
+    user_filter = ''
+    if user_id:
+        user_filter = 'AND user_id = %s'
+        params.append(str(user_id))
+
+    rows = db.query_all(
+        f"""
+        SELECT id, user_id, question, answer, provider, model, topic_tags,
+               source, memory_metadata, created_at, updated_at
+        FROM dashboard_agent_memory
+        WHERE answer IS NOT NULL
+          AND ({' OR '.join(suspicious_filters)})
+          {user_filter}
+        ORDER BY created_at DESC
+        LIMIT %s
+        """,
+        tuple(params + [limit]),
+    )
+
+    cleaned = []
+    for row in rows:
+        before = str(row.get('answer') or '')
+        after = _normalize_dashboard_agent_answer(before)
+        if after and after != before:
+            cleaned.append({
+                **row,
+                'cleanedAnswer': after,
+                'originalPreview': before[:220],
+                'cleanedPreview': after[:220],
+            })
+
+    if not dry_run and cleaned:
+        for row in cleaned:
+            metadata = parse_jsonish(row.get('memory_metadata'), {})
+            metadata['cleanedBy'] = 'robin_meta_preamble_cleanup'
+            metadata['cleanedAt'] = datetime.now(timezone.utc).isoformat()
+            db.execute(
+                """
+                UPDATE dashboard_agent_memory
+                SET answer = %s,
+                    memory_metadata = %s::jsonb,
+                    updated_at = now()
+                WHERE id = %s
+                """,
+                (row['cleanedAnswer'], json.dumps(metadata), row['id']),
+            )
+
+    return {
+        'scanned': len(rows),
+        'cleanable': len(cleaned),
+        'updated': 0 if dry_run else len(cleaned),
+        'dryRun': bool(dry_run),
+        'sample': [
+            {
+                'id': str(row.get('id')),
+                'userId': str(row.get('user_id')),
+                'question': str(row.get('question') or '')[:160],
+                'before': row.get('originalPreview'),
+                'after': row.get('cleanedPreview'),
+            }
+            for row in cleaned[:10]
+        ],
+    }
+
+
 def _estimate_token_count(value):
     return max(1, int(len(str(value or '')) / 4) + 1)
 
@@ -1277,6 +1397,7 @@ def _serialize_dashboard_memory(row, question=None, answer=None, provider=None, 
     if not isinstance(row_tags, list):
         row_tags = []
     metadata = parse_jsonish(row.get('memory_metadata'), {})
+    answer_value = _normalize_dashboard_agent_answer(answer if answer is not None else row.get('answer'))
     try:
         token_estimate = int(metadata.get('tokenEstimate') or 0) or None
     except Exception:
@@ -1284,7 +1405,7 @@ def _serialize_dashboard_memory(row, question=None, answer=None, provider=None, 
     return {
         'id': str(row.get('id') or uuid.uuid4()),
         'question': question or row.get('question') or '',
-        'answer': answer or row.get('answer') or '',
+        'answer': answer_value,
         'provider': provider or row.get('provider'),
         'model': model or row.get('model'),
         'tags': tags if tags is not None else row_tags,
