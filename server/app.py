@@ -44,6 +44,36 @@ def _ad_head_snippet():
     return '\n    <!-- Admin ad verification settings -->\n    ' + '\n    '.join(snippets)
 
 
+def _run_robin_saved_answer_startup_cleanup():
+    enabled = os.getenv('ROBIN_SAVED_ANSWER_CLEANUP_ON_STARTUP', 'true').strip().lower()
+    if enabled in {'0', 'false', 'no', 'off'}:
+        return
+
+    marker_key = 'robin_saved_answer_cleanup_2026_06_26_v1'
+    try:
+        from admin_settings import get_admin_setting, save_admin_setting
+        existing = get_admin_setting(marker_key, None)
+        if isinstance(existing, dict) and existing.get('completed'):
+            return
+
+        from routes.ai_routes import _cleanup_dashboard_agent_memory_answers
+        result = _cleanup_dashboard_agent_memory_answers(limit=1000, dry_run=False)
+        save_admin_setting(marker_key, {
+            'completed': True,
+            'scanned': result.get('scanned', 0),
+            'cleanable': result.get('cleanable', 0),
+            'updated': result.get('updated', 0),
+        })
+        logging.info(
+            'Robin saved-answer startup cleanup completed: scanned=%s cleanable=%s updated=%s',
+            result.get('scanned', 0),
+            result.get('cleanable', 0),
+            result.get('updated', 0),
+        )
+    except Exception as exc:
+        logging.warning('Robin saved-answer startup cleanup skipped: %s', exc)
+
+
 def _serve_index_with_ad_settings(static_dir):
     index_path = os.path.join(static_dir, 'index.html')
     try:
@@ -81,6 +111,8 @@ def create_app():
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     app.register_blueprint(pdf_bp, url_prefix='/api/pdf')
     app.register_blueprint(api_bp, url_prefix='/api')
+
+    _run_robin_saved_answer_startup_cleanup()
 
     @app.route('/api', methods=['GET'])
     @app.route('/api/health', methods=['GET'])
