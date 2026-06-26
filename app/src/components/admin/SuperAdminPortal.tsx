@@ -2170,8 +2170,9 @@ function AIConfigTab() {
   const [lawyerSettings, setLawyerSettings] = useState<AdminLawyerDirectorySettings | null>(null);
   const [robinUsageSettings, setRobinUsageSettings] = useState<AdminRobinUsageSettings | null>(null);
   const [settingsNotice, setSettingsNotice] = useState('');
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [savingSettingsKey, setSavingSettingsKey] = useState<'ai' | 'welcome' | 'robinUsage' | 'lawyer' | null>(null);
   const [refreshingProvider, setRefreshingProvider] = useState<string | null>(null);
+  const isSavingAnySettings = Boolean(savingSettingsKey);
 
   const envLines = configureProvider ? buildProviderEnvLines(configureProvider) : [];
   const openCoolifyEnv = () => window.open(COOLIFY_ENVIRONMENT_URL, '_blank', 'noopener,noreferrer');
@@ -2255,16 +2256,49 @@ function AIConfigTab() {
     return baseProviders;
   })();
 
-  const availableModelRefs = editableProviders.flatMap(provider => {
+  const providerDefaultModel = (provider: AdminProviderStatus) => {
     const providerSetting = aiSettings?.providers?.[provider.provider] || {};
+    const catalogDefault = aiSettings?.modelCatalog?.[provider.provider]?.find(Boolean);
+    return (
+      providerSetting.defaultModel?.trim()
+      || provider.defaultModel?.trim()
+      || catalogDefault?.trim()
+      || (provider.provider === 'minimax' ? 'MiniMax-M3' : 'auto')
+    );
+  };
+
+  const availableModelRefs = editableProviders.flatMap(provider => {
     const catalogModels = aiSettings?.modelCatalog?.[provider.provider] || [];
     const models = Array.from(new Set([
-      providerSetting.defaultModel,
-      provider.defaultModel,
+      providerDefaultModel(provider),
       ...catalogModels,
     ].filter(Boolean) as string[]));
     return models.map(model => modelRef(provider.provider, model));
   });
+
+  const normalizedAISettingsForSave = (): AdminAISettings | null => {
+    if (!aiSettings) return null;
+    const providers = { ...(aiSettings.providers || {}) };
+    editableProviders.forEach(provider => {
+      providers[provider.provider] = {
+        ...(providers[provider.provider] || {}),
+        defaultModel: providerDefaultModel(provider),
+      };
+    });
+    const defaultProvider = aiSettings.defaultProvider || status?.ai.defaultProvider || 'unified';
+    const defaultProviderMatch = editableProviders.find(provider => provider.provider === defaultProvider);
+    return {
+      ...aiSettings,
+      defaultProvider,
+      defaultModel: (
+        aiSettings.defaultModel?.trim()
+        || status?.ai.defaultModel?.trim()
+        || (defaultProviderMatch ? providerDefaultModel(defaultProviderMatch) : '')
+        || 'auto'
+      ),
+      providers,
+    };
+  };
 
   const updateRoleAssignment = (roleId: AdminAIRoleId, patch: Partial<NonNullable<AdminAISettings['roleAssignments']>[AdminAIRoleId]>) => {
     setAiSettings(prev => {
@@ -2358,24 +2392,25 @@ function AIConfigTab() {
   };
 
   const saveAISettings = async () => {
-    if (!aiSettings) return;
-    setIsSavingSettings(true);
+    const settingsToSave = normalizedAISettingsForSave();
+    if (!settingsToSave) return;
+    setSavingSettingsKey('ai');
     setSettingsNotice('');
     try {
-      const saved = await saveAdminAISettings(aiSettings);
+      const saved = await saveAdminAISettings(settingsToSave);
       setAiSettings(saved);
       setSettingsNotice('AI role routing settings saved. New Robin and support requests will use this configuration.');
       await refresh();
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : 'Unable to save AI settings');
     } finally {
-      setIsSavingSettings(false);
+      setSavingSettingsKey(null);
     }
   };
 
   const saveWelcomeSettings = async () => {
     if (!welcomeSettings) return;
-    setIsSavingSettings(true);
+    setSavingSettingsKey('welcome');
     setSettingsNotice('');
     try {
       setWelcomeSettings(await saveAdminWelcomeMessages(welcomeSettings));
@@ -2383,7 +2418,7 @@ function AIConfigTab() {
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : 'Unable to save welcome messages');
     } finally {
-      setIsSavingSettings(false);
+      setSavingSettingsKey(null);
     }
   };
 
@@ -2401,7 +2436,7 @@ function AIConfigTab() {
 
   const saveRobinUsageSettings = async () => {
     if (!robinUsageSettings) return;
-    setIsSavingSettings(true);
+    setSavingSettingsKey('robinUsage');
     setSettingsNotice('');
     try {
       const saved = await saveAdminRobinUsageSettings(robinUsageSettings);
@@ -2410,7 +2445,7 @@ function AIConfigTab() {
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : 'Unable to save Robin usage limits');
     } finally {
-      setIsSavingSettings(false);
+      setSavingSettingsKey(null);
     }
   };
 
@@ -2428,7 +2463,7 @@ function AIConfigTab() {
 
   const saveLawyerSettings = async () => {
     if (!lawyerSettings) return;
-    setIsSavingSettings(true);
+    setSavingSettingsKey('lawyer');
     setSettingsNotice('');
     try {
       setLawyerSettings(await saveAdminLawyerDirectory(lawyerSettings));
@@ -2436,7 +2471,7 @@ function AIConfigTab() {
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : 'Unable to save lawyer directory');
     } finally {
-      setIsSavingSettings(false);
+      setSavingSettingsKey(null);
     }
   };
 
@@ -2685,8 +2720,8 @@ function AIConfigTab() {
               </div>
             </div>
 
-            <Button onClick={saveRobinUsageSettings} disabled={isSavingSettings} className="bg-gradient-to-r from-indigo-700 to-cyan-700 font-extrabold text-white">
-              {isSavingSettings ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+            <Button type="button" onClick={saveRobinUsageSettings} disabled={isSavingAnySettings} className="bg-gradient-to-r from-indigo-700 to-cyan-700 font-extrabold text-white">
+              {savingSettingsKey === 'robinUsage' ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
               Save Robin Limits
             </Button>
           </CardContent>
@@ -2786,7 +2821,7 @@ function AIConfigTab() {
                         className="bg-white font-semibold text-slate-950"
                       />
                       <Input
-                        value={providerSetting.defaultModel ?? provider.defaultModel ?? ''}
+                        value={providerDefaultModel(provider)}
                         onChange={(event) => updateAIProviderSetting(provider.provider, { defaultModel: event.target.value })}
                         placeholder="Default model"
                         className="bg-white font-semibold text-slate-950"
@@ -2947,8 +2982,8 @@ function AIConfigTab() {
                 <p className="text-sm font-semibold text-slate-700">
                   Current live default: {status?.ai.defaultProvider || 'unknown'} / {status?.ai.defaultModel || 'unknown'}
                 </p>
-                <Button onClick={saveAISettings} disabled={isSavingSettings} className="bg-gradient-to-r from-emerald-700 to-cyan-700 text-white">
-                  {isSavingSettings ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                <Button type="button" onClick={saveAISettings} disabled={isSavingAnySettings} className="bg-gradient-to-r from-emerald-700 to-cyan-700 text-white">
+                  {savingSettingsKey === 'ai' ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                   Save LLM Settings
                 </Button>
               </div>
@@ -2987,7 +3022,7 @@ function AIConfigTab() {
                 <Switch checked={welcomeSettings.sendEmail} onCheckedChange={(checked) => setWelcomeSettings(prev => prev ? { ...prev, sendEmail: checked } : prev)} />
                 Also send email alerts
               </label>
-              <Button onClick={saveWelcomeSettings} disabled={isSavingSettings} className="bg-gradient-to-r from-blue-700 to-cyan-700 text-white">
+              <Button type="button" onClick={saveWelcomeSettings} disabled={isSavingAnySettings} className="bg-gradient-to-r from-blue-700 to-cyan-700 text-white">
                 Save Automatic Messages
               </Button>
             </div>
@@ -3130,7 +3165,7 @@ function AIConfigTab() {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={saveLawyerSettings} disabled={isSavingSettings} className="bg-gradient-to-r from-amber-600 to-emerald-700 text-white">
+              <Button type="button" onClick={saveLawyerSettings} disabled={isSavingAnySettings} className="bg-gradient-to-r from-amber-600 to-emerald-700 text-white">
                 Save Lawyer Directory
               </Button>
             </div>

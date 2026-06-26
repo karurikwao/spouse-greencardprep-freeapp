@@ -566,6 +566,27 @@ def _sanitize_model_catalog(value):
     return catalog
 
 
+def _admin_default_model_for_provider(provider_id, model_catalog=None, provider_config=None):
+    provider_key = _normalize_provider_id(provider_id)
+    catalog = model_catalog if isinstance(model_catalog, dict) else {}
+    provider = provider_config if isinstance(provider_config, dict) else {}
+    explicit = str(provider.get('defaultModel') or provider.get('default_model') or '').strip()
+    if explicit:
+        return explicit
+    catalog_default = next((str(model or '').strip() for model in catalog.get(provider_key, []) if str(model or '').strip()), '')
+    if catalog_default:
+        return catalog_default
+    env_defaults = {
+        'minimax': os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3'),
+        'unified': os.getenv('UNIFIED_LLM_DEFAULT_MODEL', 'auto'),
+        'openai': os.getenv('OPENAI_DEFAULT_MODEL', 'gpt-5-mini'),
+        'anthropic': os.getenv('ANTHROPIC_DEFAULT_MODEL', 'claude-3-haiku-20240307'),
+        'deepseek': os.getenv('DEEPSEEK_DEFAULT_MODEL', 'deepseek-chat'),
+        'nvidia': os.getenv('NVIDIA_DEFAULT_MODEL', 'meta/llama-3.1-8b-instruct'),
+    }
+    return env_defaults.get(provider_key, 'auto')
+
+
 def _public_role_assignments(config=None):
     config = config if isinstance(config, dict) else saved_ai_runtime_config()
     raw_roles = config.get('roleAssignments') if isinstance(config.get('roleAssignments'), dict) else {}
@@ -638,21 +659,31 @@ def _public_lawyer_directory_config(config=None):
 def _public_ai_runtime_config(config=None):
     config = config if isinstance(config, dict) else saved_ai_runtime_config()
     providers = config.get('providers') if isinstance(config.get('providers'), dict) else {}
+    model_catalog = _sanitize_model_catalog(config.get('modelCatalog'))
+    model_catalog.setdefault('minimax', MINIMAX_MODEL_CATALOG)
     public_providers = {}
     for provider_id, provider_config in providers.items():
         if not isinstance(provider_config, dict):
             continue
         api_key = provider_config.get('apiKey') or provider_config.get('api_key') or ''
-        public_providers[provider_id] = {
+        provider_key = _normalize_provider_id(provider_id)
+        public_provider = {
             **{k: v for k, v in provider_config.items() if k not in {'apiKey', 'api_key'}},
             'apiKeyConfigured': bool(api_key),
             'apiKeyMasked': _mask_secret(api_key),
         }
-    model_catalog = _sanitize_model_catalog(config.get('modelCatalog'))
-    model_catalog.setdefault('minimax', MINIMAX_MODEL_CATALOG)
+        public_provider['defaultModel'] = _admin_default_model_for_provider(provider_key, model_catalog, provider_config)
+        public_providers[provider_key] = public_provider
+    default_provider = _normalize_provider_id(config.get('defaultProvider') or config.get('default_provider') or '')
+    default_model = str(config.get('defaultModel') or config.get('default_model') or '').strip()
+    if not default_model and default_provider:
+        default_model = (
+            public_providers.get(default_provider, {}).get('defaultModel')
+            or _admin_default_model_for_provider(default_provider, model_catalog)
+        )
     return {
-        'defaultProvider': config.get('defaultProvider') or config.get('default_provider') or '',
-        'defaultModel': config.get('defaultModel') or config.get('default_model') or '',
+        'defaultProvider': default_provider,
+        'defaultModel': default_model,
         'fallbackProviders': config.get('fallbackProviders') or config.get('fallback_providers') or [],
         'providers': public_providers,
         'modelCatalog': model_catalog,
@@ -1698,6 +1729,8 @@ def admin_ai_settings_endpoint():
 
     data = request.get_json() or {}
     providers = data.get('providers') if isinstance(data.get('providers'), dict) else {}
+    model_catalog = _sanitize_model_catalog(data.get('modelCatalog'))
+    model_catalog.setdefault('minimax', MINIMAX_MODEL_CATALOG)
     sanitized_providers = {}
     existing = saved_ai_runtime_config()
     existing_providers = existing.get('providers') if isinstance(existing.get('providers'), dict) else {}
@@ -1720,9 +1753,12 @@ def admin_ai_settings_endpoint():
             openai_compatible = previous.get('openAICompatible')
         if openai_compatible is None:
             openai_compatible = provider_key not in {'openai', 'anthropic', 'deepseek', 'nvidia'}
+        default_model = str(provider_config.get('defaultModel') or provider_config.get('default_model') or '').strip()
+        if not default_model:
+            default_model = _admin_default_model_for_provider(provider_key, model_catalog, previous)
         sanitized = {
             'enabled': bool(provider_config.get('enabled', True)),
-            'defaultModel': str(provider_config.get('defaultModel') or provider_config.get('default_model') or '').strip(),
+            'defaultModel': default_model,
             'label': str(provider_config.get('label') or previous.get('label') or provider_key.replace('_', ' ').title()).strip()[:120],
             'openAICompatible': bool(openai_compatible),
             'custom': bool(provider_config.get('custom') or previous.get('custom') or provider_key not in {'openai', 'anthropic', 'deepseek', 'nvidia', 'unified', 'minimax'}),
@@ -1744,12 +1780,20 @@ def admin_ai_settings_endpoint():
         'roleAssignments': data.get('roleAssignments') if isinstance(data.get('roleAssignments'), dict) else {},
     })
 
+    default_provider = _normalize_provider_id(data.get('defaultProvider') or data.get('default_provider') or '')
+    default_model = str(data.get('defaultModel') or data.get('default_model') or '').strip()
+    if not default_model and default_provider:
+        default_model = (
+            sanitized_providers.get(default_provider, {}).get('defaultModel')
+            or _admin_default_model_for_provider(default_provider, model_catalog)
+        )
+
     saved = save_admin_setting('ai_runtime_config', {
-        'defaultProvider': str(data.get('defaultProvider') or data.get('default_provider') or '').strip().lower(),
-        'defaultModel': str(data.get('defaultModel') or data.get('default_model') or '').strip(),
+        'defaultProvider': default_provider,
+        'defaultModel': default_model,
         'fallbackProviders': [str(item).strip().lower() for item in fallback if str(item).strip()],
         'providers': sanitized_providers,
-        'modelCatalog': _sanitize_model_catalog(data.get('modelCatalog')),
+        'modelCatalog': model_catalog,
         'roleAssignments': role_assignments,
     }, user.get('id'))
     return jsonify({'success': True, 'settings': _public_ai_runtime_config(saved)})
