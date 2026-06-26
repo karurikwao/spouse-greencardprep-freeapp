@@ -7,6 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+DEFAULT_BOOTSTRAP_SUPERADMIN_EMAILS = ('luewaweru@gmail.com',)
+
+
+def bootstrap_superadmin_emails():
+    configured = os.getenv('BOOTSTRAP_SUPERADMIN_EMAILS') or os.getenv('SUPERADMIN_EMAILS') or ''
+    emails = {email.strip().lower() for email in configured.split(',') if email.strip()}
+    emails.update(DEFAULT_BOOTSTRAP_SUPERADMIN_EMAILS)
+    return sorted(emails)
+
+
 def run_incremental_migrations(cur):
     cur.execute(
         """
@@ -362,6 +372,20 @@ def run_incremental_migrations(cur):
         $$ LANGUAGE plpgsql SECURITY DEFINER;
         """
     )
+
+    for email in bootstrap_superadmin_emails():
+        cur.execute(
+            """
+            UPDATE user_profiles p
+            SET role = 'superadmin',
+                is_active = true,
+                updated_at = now()
+            FROM users u
+            WHERE p.user_id = u.id
+              AND lower(u.email) = %s
+            """,
+            (email,),
+        )
 
 
 def main():

@@ -17,7 +17,35 @@ auth_bp = Blueprint('auth', __name__)
 GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs'
 GOOGLE_TOKENINFO_URL = 'https://oauth2.googleapis.com/tokeninfo'
 GOOGLE_CLIENT_ID_FALLBACK = '525916855163-4qt3urorpvh8lrs6rqidcscngcmn999d.apps.googleusercontent.com'
+DEFAULT_BOOTSTRAP_SUPERADMIN_EMAILS = ('luewaweru@gmail.com',)
 google_jwks_client = PyJWKClient(GOOGLE_JWKS_URL)
+
+
+def bootstrap_superadmin_emails() -> set[str]:
+    configured = os.getenv('BOOTSTRAP_SUPERADMIN_EMAILS') or os.getenv('SUPERADMIN_EMAILS') or ''
+    emails = {email.strip().lower() for email in configured.split(',') if email.strip()}
+    emails.update(DEFAULT_BOOTSTRAP_SUPERADMIN_EMAILS)
+    return emails
+
+
+def ensure_bootstrap_superadmin(email: str, user_id: str) -> str | None:
+    normalized_email = (email or '').strip().lower()
+    if normalized_email not in bootstrap_superadmin_emails():
+        return None
+
+    db.execute(
+        """
+        INSERT INTO user_profiles (user_id, email, display_name, role, is_active)
+        VALUES (%s, %s, %s, 'superadmin', true)
+        ON CONFLICT (user_id) DO UPDATE SET
+            email = EXCLUDED.email,
+            role = 'superadmin',
+            is_active = true,
+            updated_at = now()
+        """,
+        (user_id, normalized_email, normalized_email),
+    )
+    return 'superadmin'
 
 
 def send_password_reset_email(email: str, reset_token: str, redirect_to: str | None = None):
@@ -166,8 +194,10 @@ def signin():
     if not verify_password(password, user['password_hash']):
         return jsonify({'error': 'Invalid login credentials'}), 401
 
-    profile = db.query_one("SELECT role FROM user_profiles WHERE user_id = %s", (user['id'],))
-    role = profile['role'] if profile else 'user'
+    role = ensure_bootstrap_superadmin(email, str(user['id']))
+    if not role:
+        profile = db.query_one("SELECT role FROM user_profiles WHERE user_id = %s", (user['id'],))
+        role = profile['role'] if profile else 'user'
 
     token = create_token(str(user['id']), user['email'], role)
     refresh = create_refresh_token(str(user['id']))
@@ -248,8 +278,10 @@ def google_signin():
         except Exception as e:
             print(f"Dashboard welcome message failed for {email}: {e}")
 
-    profile = db.query_one("SELECT role FROM user_profiles WHERE user_id = %s", (user_id,))
-    role = profile['role'] if profile else 'user'
+    role = ensure_bootstrap_superadmin(email, user_id)
+    if not role:
+        profile = db.query_one("SELECT role FROM user_profiles WHERE user_id = %s", (user_id,))
+        role = profile['role'] if profile else 'user'
     token = create_token(user_id, email, role)
     refresh = create_refresh_token(user_id)
 
