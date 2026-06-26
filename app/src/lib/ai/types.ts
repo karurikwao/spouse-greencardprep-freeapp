@@ -10,7 +10,7 @@ import type { MasterQuestion, MasterCategory, MasterTopic } from '@/lib/content'
 // AI PROVIDER TYPES
 // ============================================================================
 
-export type AIProvider = 'unified' | 'openai' | 'anthropic' | 'deepseek' | 'nvidia';
+export type AIProvider = 'unified' | 'minimax' | 'openai' | 'anthropic' | 'deepseek' | 'nvidia';
 
 export interface AIModelOption {
   provider: AIProvider;

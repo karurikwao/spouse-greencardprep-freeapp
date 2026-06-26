@@ -34,7 +34,7 @@ export interface CreateNotificationInput {
 // Broadcasts
 // ============================================================================
 
-export type BroadcastAudience = 'all_users' | 'trial_users' | 'premium_users' | 'expired_users' | 'free_users';
+export type BroadcastAudience = 'all_users' | 'free_users' | 'robin_users' | 'unread_message_users' | 'reengagement_users';
 
 export interface BroadcastAnalytics {
   delivered: number;
@@ -72,10 +72,10 @@ export interface CreateBroadcastInput {
 
 export const BROADCAST_AUDIENCE_LABELS: Record<BroadcastAudience, string> = {
   all_users: 'All Users',
-  trial_users: 'Trial Users',
-  premium_users: 'Pro / Paid Members',
-  expired_users: 'Expired Subscriptions',
   free_users: 'Free Members',
+  robin_users: 'Robin Users Today',
+  unread_message_users: 'Users With Unread Messages',
+  reengagement_users: 'Re-engagement Users',
 };
 
 // ============================================================================

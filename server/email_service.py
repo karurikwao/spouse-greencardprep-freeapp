@@ -8,6 +8,7 @@ import requests
 
 
 PLUNK_SEND_URL = 'https://next-api.useplunk.com/v1/send'
+RESEND_SEND_URL = 'https://api.resend.com/emails'
 
 PLAN_LABELS = {
     'monthly': 'Robin Credit Pack',
@@ -28,7 +29,8 @@ def _frontend_url() -> str:
 
 def _from_address() -> str:
     return (
-        os.getenv('PLUNK_FROM_EMAIL')
+        os.getenv('RESEND_FROM_EMAIL')
+        or os.getenv('PLUNK_FROM_EMAIL')
         or os.getenv('EMAIL_FROM')
         or 'Spouse Interview <noreply@spouseinterview.com>'
     )
@@ -46,7 +48,7 @@ def _from_sender() -> str | Dict[str, str]:
 
 
 def _reply_address() -> Optional[str]:
-    return os.getenv('PLUNK_REPLY_TO') or os.getenv('EMAIL_REPLY_TO') or None
+    return os.getenv('RESEND_REPLY_TO') or os.getenv('PLUNK_REPLY_TO') or os.getenv('EMAIL_REPLY_TO') or None
 
 
 def _clean_subject(subject: str) -> str:
@@ -106,12 +108,48 @@ def send_email(
     tags: Optional[List[Dict[str, str]]] = None,
     idempotency_key: Optional[str] = None,
 ) -> Dict[str, object]:
-    api_key = (os.getenv('PLUNK_SECRET_KEY') or os.getenv('PLUNK_API_KEY') or '').strip()
+    preferred_provider = (os.getenv('EMAIL_PROVIDER') or '').strip().lower()
+    resend_key = (os.getenv('RESEND_API_KEY') or os.getenv('RESEND_SECRET_KEY') or '').strip()
+    plunk_key = (os.getenv('PLUNK_SECRET_KEY') or os.getenv('PLUNK_API_KEY') or '').strip()
+    provider = 'resend' if resend_key and preferred_provider != 'plunk' else 'plunk'
+    if preferred_provider in {'resend', 'plunk'}:
+        provider = preferred_provider
+    api_key = resend_key if provider == 'resend' else plunk_key
 
     if not api_key:
-        print(f'[DEV] Email skipped: PLUNK_SECRET_KEY/PLUNK_API_KEY is not configured for "{subject}" to {to_email}')
+        print(f'[DEV] Email skipped: RESEND_API_KEY/PLUNK_SECRET_KEY is not configured for "{subject}" to {to_email}')
         return {'success': True, 'skipped': True}
 
+    if provider == 'resend':
+        return _send_resend_email(
+            api_key,
+            to_email,
+            subject,
+            html_body,
+            text_body,
+            idempotency_key,
+        )
+
+    return _send_plunk_email(
+        api_key,
+        to_email,
+        subject,
+        html_body,
+        text_body,
+        tags,
+        idempotency_key,
+    )
+
+
+def _send_plunk_email(
+    api_key: str,
+    to_email: str,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    tags: Optional[List[Dict[str, str]]] = None,
+    idempotency_key: Optional[str] = None,
+) -> Dict[str, object]:
     payload = {
         'from': _from_sender(),
         'to': to_email,
@@ -145,6 +183,48 @@ def send_email(
         return {'success': True, 'id': email_id, 'provider': 'plunk'}
     except requests.RequestException as exc:
         print(f'Plunk email request failed for "{subject}": {exc}')
+        return {'success': False, 'error': str(exc)}
+
+
+def _send_resend_email(
+    api_key: str,
+    to_email: str,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+) -> Dict[str, object]:
+    payload: Dict[str, object] = {
+        'from': _from_address(),
+        'to': [to_email],
+        'subject': _clean_subject(subject),
+        'html': html_body or html_tools.escape(text_body or ''),
+    }
+    if text_body:
+        payload['text'] = text_body
+    reply_to = _reply_address()
+    if reply_to:
+        payload['reply_to'] = reply_to
+    if idempotency_key:
+        payload['headers'] = {'X-Spouse-Interview-Idempotency-Key': idempotency_key[:256]}
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    timeout_seconds = float(os.getenv('RESEND_TIMEOUT_SECONDS', os.getenv('PLUNK_TIMEOUT_SECONDS', '5')))
+    send_url = os.getenv('RESEND_API_URL', RESEND_SEND_URL)
+
+    try:
+        response = requests.post(send_url, json=payload, headers=headers, timeout=timeout_seconds)
+        if response.status_code >= 400:
+            print(f'Resend email failed ({response.status_code}) for "{subject}": {response.text[:500]}')
+            return {'success': False, 'error': response.text[:500], 'status_code': response.status_code}
+
+        data = response.json()
+        return {'success': True, 'id': data.get('id'), 'provider': 'resend'}
+    except requests.RequestException as exc:
+        print(f'Resend email request failed for "{subject}": {exc}')
         return {'success': False, 'error': str(exc)}
 
 

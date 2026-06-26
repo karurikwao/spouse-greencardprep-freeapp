@@ -37,6 +37,8 @@ export interface RobinCreditPackResponse {
   checkoutEnabled: boolean;
   dailyFreeMessages: number;
   paidMessagesRollover: boolean;
+  packsAvailable?: boolean;
+  message?: string | null;
   packs: RobinCreditPack[];
 }
 

@@ -20,6 +20,14 @@
 -- - Added complete broadcast message functions
 --
 -- WARNING: Do NOT run on existing projects - use PATCH_EXISTING_TO_CURRENT.sql instead
+--
+-- FREE-APP CONVERSION NOTE (2026-06-25):
+-- This setup file still contains legacy paid-plan, refund-request, and
+-- support-ticket compatibility schema so older database snapshots can be read.
+-- Do not treat user_subscriptions monthly/lifetime/interviewPass plans,
+-- refund_requests, support_tickets, or create_or_update_subscription as active
+-- free-app product flows. The Flask API retires those workflows and only keeps
+-- optional Robin credit purchases plus sponsor/ad controls active.
 -- ============================================================================
 
 -- ============================================================================

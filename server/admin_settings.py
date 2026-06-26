@@ -281,6 +281,11 @@ def normalize_robin_usage_settings(value: Any = None) -> dict[str, Any]:
         'pauseMessage': str(raw.get('pauseMessage') or 'Robin is temporarily paused while we tune the free app experience. Please try again soon.').strip()[:500],
         'freeMessagesRollover': False,
         'paidMessagesRollover': bool(raw.get('paidMessagesRollover', True)),
+        'paidCreditPacksEnabled': bool(raw.get('paidCreditPacksEnabled', False)),
+        'creditPacksUnavailableMessage': str(
+            raw.get('creditPacksUnavailableMessage')
+            or 'Extra Robin message packs are not available yet. Daily free messages refresh automatically each day.'
+        ).strip()[:500],
         'paidCreditExpirationDays': _bounded_int(raw.get('paidCreditExpirationDays'), 365, 1, 3650),
         'paidPacks': packs,
     }

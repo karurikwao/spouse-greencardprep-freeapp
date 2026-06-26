@@ -21,7 +21,7 @@ export const REGISTERED_MODELS: AIModelOption[] = [
     tier: 'budget',
     enabled: true,
     defaultForProvider: true,
-    defaultForInterview: true,
+    defaultForInterview: false,
     maxTokens: 4096,
     contextWindow: 128000,
   },
@@ -46,6 +46,53 @@ export const REGISTERED_MODELS: AIModelOption[] = [
     defaultForProvider: false,
     maxTokens: 4096,
     contextWindow: 131072,
+  },
+
+  // MiniMax Models
+  {
+    provider: 'minimax',
+    modelId: 'MiniMax-M3',
+    displayName: 'MiniMax M3',
+    description: 'OpenAI-compatible MiniMax model for Robin interview coaching',
+    tier: 'budget',
+    enabled: true,
+    defaultForProvider: true,
+    defaultForInterview: true,
+    maxTokens: 4096,
+    contextWindow: 1000000,
+  },
+  {
+    provider: 'minimax',
+    modelId: 'MiniMax-M2.7',
+    displayName: 'MiniMax M2.7',
+    description: 'Balanced MiniMax model for general interview practice and support drafts',
+    tier: 'standard',
+    enabled: true,
+    defaultForProvider: false,
+    maxTokens: 4096,
+    contextWindow: 204800,
+  },
+  {
+    provider: 'minimax',
+    modelId: 'MiniMax-M2.7-highspeed',
+    displayName: 'MiniMax M2.7 Highspeed',
+    description: 'Lower-latency MiniMax model for fast Robin replies',
+    tier: 'budget',
+    enabled: true,
+    defaultForProvider: false,
+    maxTokens: 4096,
+    contextWindow: 204800,
+  },
+  {
+    provider: 'minimax',
+    modelId: 'MiniMax-M2.5',
+    displayName: 'MiniMax M2.5',
+    description: 'Efficient MiniMax model for routine coaching and summarization',
+    tier: 'budget',
+    enabled: true,
+    defaultForProvider: false,
+    maxTokens: 4096,
+    contextWindow: 204800,
   },
 
   // OpenAI Models
@@ -168,6 +215,12 @@ export const PROVIDER_CONFIGS: Record<AIProvider, AIProviderConfig> = {
     apiKeyEnvVar: 'UNIFIED_LLM_API_KEY', // Server-side only (no VITE_ prefix)
     defaultModel: 'auto',
     fallbackModel: 'gemini-2.5-flash-lite',
+  },
+  minimax: {
+    provider: 'minimax',
+    enabled: true,
+    apiKeyEnvVar: 'MINIMAX_API_KEY', // Server-side only (no VITE_ prefix)
+    defaultModel: 'MiniMax-M3',
   },
   openai: {
     provider: 'openai',

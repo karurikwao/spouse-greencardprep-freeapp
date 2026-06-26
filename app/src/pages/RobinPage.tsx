@@ -33,6 +33,7 @@ function RobinCreditTopUpPanel({ isAuthenticated }: { isAuthenticated: boolean }
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreditPackStatus, setShowCreditPackStatus] = useState(false);
 
   const visiblePacks = useMemo(() => {
     if (!packResponse?.checkoutEnabled) return [];
@@ -84,6 +85,7 @@ function RobinCreditTopUpPanel({ isAuthenticated }: { isAuthenticated: boolean }
     const params = new URLSearchParams(window.location.search);
     const checkoutStatus = params.get('credits');
     const sessionId = params.get('session_id');
+    setShowCreditPackStatus(Boolean(checkoutStatus));
 
     if (checkoutStatus === 'cancelled') {
       setNotice('Checkout was cancelled. No Robin credits were added.');
@@ -140,7 +142,8 @@ function RobinCreditTopUpPanel({ isAuthenticated }: { isAuthenticated: boolean }
   };
 
   const hasCreditBalance = isAuthenticated && Boolean(credits) && (credits?.balance || 0) > 0;
-  const shouldShowPanel = hasCreditBalance || visiblePacks.length > 0 || notice || error;
+  const hasPausedPacksMessage = Boolean(showCreditPackStatus && packResponse && !packResponse.checkoutEnabled && packResponse.message);
+  const shouldShowPanel = hasCreditBalance || visiblePacks.length > 0 || hasPausedPacksMessage || notice || error;
 
   if (!shouldShowPanel && !isLoadingPacks) return null;
   if (!shouldShowPanel && isLoadingPacks) return null;
@@ -193,6 +196,12 @@ function RobinCreditTopUpPanel({ isAuthenticated }: { isAuthenticated: boolean }
             <span>{error || notice}</span>
             {isConfirmingCheckout && <Loader2 className="h-4 w-4 animate-spin" />}
           </div>
+        </div>
+      )}
+
+      {hasPausedPacksMessage && (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+          {packResponse?.message}
         </div>
       )}
 

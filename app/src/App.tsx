@@ -118,25 +118,35 @@ import {
   TopQuestionsPage,
   TopicHubPage,
 } from '@/components/seo/SEORoutePages';
-import { AIInterviewPage } from '@/components/ai';
-import { InvitePage } from '@/components/invite/InvitePage';
-import { BillingSuccessPage } from '@/pages/billing/BillingSuccessPage';
-import { BillingCancelPage } from '@/pages/billing/BillingCancelPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { AccountSettingsPage } from '@/pages/AccountSettingsPage';
-import { MessagesPage } from '@/pages/MessagesPage';
-import { RobinPage } from '@/pages/RobinPage';
-import { PDFLibraryPage } from '@/pages/PDFLibraryPage';
 import { cn } from '@/lib/utils';
 import { AnnouncementBanner, TrustSnippets, ContentBlocks } from '@/components/content';
 import { VerificationCodeInjector } from '@/components/verification/VerificationCodeInjector';
-import { useCaptureReferralOnMount } from '@/hooks/useReferralTracking';
+import { useCaptureReferralOnMount } from '@/hooks/useCaptureReferralOnMount';
 // Note: trackPDFDownload is now handled internally by SecurePDFDownload component
 import { SecurePDFDownload } from '@/components/paywall';
 import './App.css';
 
 const AdminPanel = lazy(() => import('@/components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 const SuperAdminPortal = lazy(() => import('@/components/admin/SuperAdminPortal').then((module) => ({ default: module.SuperAdminPortal })));
+const AIInterviewPage = lazy(() => import('@/components/ai/AIInterviewPage').then((module) => ({ default: module.AIInterviewPage })));
+const InvitePage = lazy(() => import('@/components/invite/InvitePage').then((module) => ({ default: module.InvitePage })));
+const BillingSuccessPage = lazy(() => import('@/pages/billing/BillingSuccessPage').then((module) => ({ default: module.BillingSuccessPage })));
+const BillingCancelPage = lazy(() => import('@/pages/billing/BillingCancelPage').then((module) => ({ default: module.BillingCancelPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
+const AccountSettingsPage = lazy(() => import('@/pages/AccountSettingsPage').then((module) => ({ default: module.AccountSettingsPage })));
+const MessagesPage = lazy(() => import('@/pages/MessagesPage').then((module) => ({ default: module.MessagesPage })));
+const RobinPage = lazy(() => import('@/pages/RobinPage').then((module) => ({ default: module.RobinPage })));
+const PDFLibraryPage = lazy(() => import('@/pages/PDFLibraryPage').then((module) => ({ default: module.PDFLibraryPage })));
+
+function PageLoadingFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center bg-white px-4">
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+        Loading...
+      </div>
+    </div>
+  );
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -2364,57 +2374,59 @@ function App() {
             {/* Verification code injection - head (injected via useEffect) */}
             <VerificationCodeInjector placement="head" />
             
-            {page === 'home' && <HomePage navigate={navigate} />}
-            {page === 'dashboard' && <HomePage navigate={navigate} initialViewMode="dashboard" />}
-            {page === 'messages' && <MessagesPage onBack={() => navigate('dashboard')} />}
-            {page === 'robin' && <RobinPage onBack={() => navigate('dashboard')} />}
-            {page === 'pdf-library' && <PDFLibraryPage onBack={() => navigate('dashboard')} />}
-            {page === 'timeline-builder' && <RelationshipTimelinePage onBack={navigateToAppBack} />}
-            {page === 'readiness' && <HomePage navigate={navigate} initialViewMode="readiness" />}
-            {page === 'stress-review' && <HomePage navigate={navigate} initialViewMode="stress-review" />}
-            {page === 'question' && (
-              <SEOQuestionPage
-                questionSlug={questionSlug}
-                onBack={navigateToAppBack}
-                onPractice={() => navigate('ai-interview')}
-              />
-            )}
-            {page === 'topic' && (
-              <TopicHubPage topicSlug={topicSlug} onBack={() => navigate('interview-topics')} />
-            )}
-            {page === 'situation' && (
-              <SituationGuidePage situationSlug={situationSlug} onBack={navigateToAppBack} />
-            )}
-            {page === 'privacy' && <PrivacyPolicy />}
-            {page === 'terms' && <Terms />}
-            {page === 'contact' && <Contact />}
-            {page === 'terms-of-service' && <TermsOfService onBack={navigateToAppBack} />}
-            {page === 'invite' && (
-              <InvitePage 
-                inviteCode={inviteCode}
-                onBack={navigateToAppBack}
-              />
-            )}
-            {page === 'top-questions' && <TopQuestionsPage onBack={navigateToAppBack} />}
-            {page === 'question-database' && <QuestionDatabasePage onBack={navigateToAppBack} />}
-            {page === 'authority-preparation' && <AuthorityPreparationPage onBack={navigateToAppBack} />}
-            {page === 'interview-topics' && <InterviewTopicsPage onBack={navigateToAppBack} />}
-            {page === 'pillar' && clusterSlug && (
-              <PillarPage clusterSlug={clusterSlug} onBack={() => navigate('authority-preparation')} />
-            )}
-            {page === 'supporting' && clusterSlug && supportingSlug && (
-              <SupportingPage clusterSlug={clusterSlug} supportingSlug={supportingSlug} onBack={() => navigate('pillar', clusterSlug)} />
-            )}
-            {page === 'ai-interview' && (
-              <AIInterviewPage 
-                mode="standard"
-                onExit={navigateToAppBack}
-              />
-            )}
-            {page === 'billing-success' && <BillingSuccessPage />}
-            {page === 'billing-cancel' && <BillingCancelPage />}
-            {page === 'reset-password' && <ResetPasswordPage />}
-            {page === 'account' && <AccountSettingsPage />}
+            <Suspense fallback={<PageLoadingFallback />}>
+              {page === 'home' && <HomePage navigate={navigate} />}
+              {page === 'dashboard' && <HomePage navigate={navigate} initialViewMode="dashboard" />}
+              {page === 'messages' && <MessagesPage onBack={() => navigate('dashboard')} />}
+              {page === 'robin' && <RobinPage onBack={() => navigate('dashboard')} />}
+              {page === 'pdf-library' && <PDFLibraryPage onBack={() => navigate('dashboard')} />}
+              {page === 'timeline-builder' && <RelationshipTimelinePage onBack={navigateToAppBack} />}
+              {page === 'readiness' && <HomePage navigate={navigate} initialViewMode="readiness" />}
+              {page === 'stress-review' && <HomePage navigate={navigate} initialViewMode="stress-review" />}
+              {page === 'question' && (
+                <SEOQuestionPage
+                  questionSlug={questionSlug}
+                  onBack={navigateToAppBack}
+                  onPractice={() => navigate('ai-interview')}
+                />
+              )}
+              {page === 'topic' && (
+                <TopicHubPage topicSlug={topicSlug} onBack={() => navigate('interview-topics')} />
+              )}
+              {page === 'situation' && (
+                <SituationGuidePage situationSlug={situationSlug} onBack={navigateToAppBack} />
+              )}
+              {page === 'privacy' && <PrivacyPolicy />}
+              {page === 'terms' && <Terms />}
+              {page === 'contact' && <Contact />}
+              {page === 'terms-of-service' && <TermsOfService onBack={navigateToAppBack} />}
+              {page === 'invite' && (
+                <InvitePage
+                  inviteCode={inviteCode}
+                  onBack={navigateToAppBack}
+                />
+              )}
+              {page === 'top-questions' && <TopQuestionsPage onBack={navigateToAppBack} />}
+              {page === 'question-database' && <QuestionDatabasePage onBack={navigateToAppBack} />}
+              {page === 'authority-preparation' && <AuthorityPreparationPage onBack={navigateToAppBack} />}
+              {page === 'interview-topics' && <InterviewTopicsPage onBack={navigateToAppBack} />}
+              {page === 'pillar' && clusterSlug && (
+                <PillarPage clusterSlug={clusterSlug} onBack={() => navigate('authority-preparation')} />
+              )}
+              {page === 'supporting' && clusterSlug && supportingSlug && (
+                <SupportingPage clusterSlug={clusterSlug} supportingSlug={supportingSlug} onBack={() => navigate('pillar', clusterSlug)} />
+              )}
+              {page === 'ai-interview' && (
+                <AIInterviewPage
+                  mode="standard"
+                  onExit={navigateToAppBack}
+                />
+              )}
+              {page === 'billing-success' && <BillingSuccessPage />}
+              {page === 'billing-cancel' && <BillingCancelPage />}
+              {page === 'reset-password' && <ResetPasswordPage />}
+              {page === 'account' && <AccountSettingsPage />}
+            </Suspense>
             
             {/* Verification code injection - body_end */}
             <VerificationCodeInjector placement="body_end" />

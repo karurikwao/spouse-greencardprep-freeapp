@@ -56,7 +56,6 @@ import { useOptionalAuth } from '@/lib/auth/AuthContext';
 import { cn } from '@/lib/utils';
 import { SEOSettingsTab } from './SEOSettingsTab';
 import { SEOExpansionTab } from './SEOExpansionTab';
-import { PAID_PLANS } from '@/lib/plans';
 import {
   fetchAdminAISettings,
   fetchAdminAdSettings,
@@ -115,7 +114,6 @@ import {
   toggleBroadcastStatus,
 } from '@/lib/notifications/api';
 import type { AdminSupportTicket, BroadcastAudience, BroadcastMessage } from '@/lib/notifications';
-import { BROADCAST_AUDIENCE_LABELS } from '@/lib/notifications';
 import { RichMessageContent } from '@/components/messages/RichMessageContent';
 import {
   getCandidateDetails,
@@ -176,13 +174,6 @@ function useAdminMemoryStatus() {
   }, []);
 
   return { status, isLoading, error, refresh };
-}
-
-function formatCents(amount: number, currency: string) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amount / 100);
 }
 
 function ConfigBadge({ configured, label }: { configured: boolean; label?: string }) {
@@ -551,6 +542,18 @@ function UsersTab() {
     return formatDate(value);
   };
 
+  const formatFreeAppAccessRecord = (user: AdminUserSnapshot) => {
+    if (user.provider_customer_id || user.provider_subscription_id) {
+      return 'Free app with archived payment metadata';
+    }
+
+    if (user.plan_type === 'trial' || user.subscription_status === 'trialing') {
+      return 'Free app daily limits active';
+    }
+
+    return 'Free-app account record';
+  };
+
   const activityIcon = (kind: string) => {
     if (kind === 'robin') return Bot;
     if (kind === 'robin_credit') return CreditCard;
@@ -676,8 +679,8 @@ function UsersTab() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatCard title="Total Users" value={(usersResponse?.totals.totalUsers ?? 0).toLocaleString()} change="" trend="up" icon={Users} />
-        <StatCard title="Historical Paid" value={(usersResponse?.totals.paidUsers ?? 0).toLocaleString()} change="" trend="up" icon={CreditCard} />
-        <StatCard title="Historical Trial" value={(usersResponse?.totals.trialUsers ?? 0).toLocaleString()} change="" trend="up" icon={Activity} />
+        <StatCard title="Free Users" value={(usersResponse?.totals.freeUsers ?? usersResponse?.totals.totalUsers ?? 0).toLocaleString()} change="" trend="up" icon={Activity} />
+        <StatCard title="Archived Payment Metadata" value={(usersResponse?.totals.paidUsers ?? 0).toLocaleString()} change="" trend="up" icon={CreditCard} />
         <StatCard title="Robin Today" value={(usersResponse?.totals.robinActiveToday ?? 0).toLocaleString()} change="" trend="up" icon={Bot} />
         <StatCard title="Unread Messages" value={(usersResponse?.totals.usersWithUnreadMessages ?? 0).toLocaleString()} change="" trend="up" icon={Mail} />
       </div>
@@ -756,7 +759,7 @@ function UsersTab() {
                             <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
                               Free app
                             </Badge>
-                            <div className="text-xs text-slate-500 capitalize">Historical plan: {user.plan_type} / {user.subscription_status.replace('_', ' ')}</div>
+                            <div className="text-xs text-slate-500">{formatFreeAppAccessRecord(user)}</div>
                           </div>
                         </td>
                         <td className="p-3">
@@ -814,7 +817,7 @@ function UsersTab() {
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Access</div>
                   <div className="mt-1 font-semibold text-slate-900">Free app</div>
-                  <div className="text-xs text-slate-500 capitalize">Historical plan: {selectedUser.plan_type} / {selectedUser.subscription_status.replace('_', ' ')}</div>
+                  <div className="text-xs text-slate-500">{formatFreeAppAccessRecord(selectedUser)}</div>
                 </div>
                 <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">Robin Today</div>
@@ -856,8 +859,7 @@ function UsersTab() {
                 <div className="rounded-lg border border-slate-200 p-3">
                   <div className="font-medium text-slate-900">Free-App Access</div>
                   <p className="mt-1 text-slate-600">
-                    Core access is not tied to an active paid plan. Historical provider ID:
-                    {' '}{selectedUser.provider_customer_id || 'not attached'}.
+                    Core access is free for this account. Optional Robin credit checkout remains unavailable until processor approval.
                   </p>
                 </div>
                 <div className="rounded-lg border border-slate-200 p-3">
@@ -931,7 +933,7 @@ function UsersTab() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="font-extrabold text-slate-950">Robin Credit Ledger</div>
-                        <p className="text-xs font-semibold text-fuchsia-800">Manual paid-credit scaffold. Checkout can attach here later.</p>
+                        <p className="text-xs font-semibold text-fuchsia-800">Manual extra-message ledger. Processor checkout can attach here after approval.</p>
                       </div>
                       <CreditCard className="h-4 w-4 text-fuchsia-700" />
                     </div>
@@ -997,7 +999,7 @@ function UsersTab() {
                     </div>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs font-semibold text-fuchsia-800">
-                        Paid credits are consumed only after daily free Robin messages are used.
+                        Extra message credits are consumed only after daily free Robin messages are used.
                       </p>
                       <Button
                         type="button"
@@ -1131,7 +1133,7 @@ function UsersTab() {
   );
 }
 
-// Billing Tab
+// Retired billing status
 function BillingTab() {
   const { status, isLoading, error, refresh } = useAdminSystemStatus();
 
@@ -1143,8 +1145,8 @@ function BillingTab() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base">Subscription Plans</CardTitle>
-              <CardDescription>Live app pricing and Stripe test price wiring.</CardDescription>
+              <CardTitle className="text-base">Free App Billing Status</CardTitle>
+              <CardDescription>Core access is free. Stripe is only used for optional Robin credit packs.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={refresh}>
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -1152,28 +1154,16 @@ function BillingTab() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {PAID_PLANS.map((plan) => {
-              const price = status?.stripe.prices[plan.id as keyof AdminSystemStatus['stripe']['prices']];
-              const amount = price ? formatCents(price.expectedAmount, price.currency) : ('price' in plan ? `$${plan.price}` : 'Paid');
-
-              return (
-              <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <div className="font-medium text-slate-800">{plan.name}</div>
-                  <div className="text-sm text-slate-600">{amount} {price?.mode === 'subscription' ? 'recurring monthly' : 'one-time'}</div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    PDFs, partner sync, Robin practice, provider/model choice
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <ConfigBadge configured={Boolean(price?.configured)} />
-                  <span className="hidden sm:inline text-xs text-slate-500">{price?.envVar}</span>
-                </div>
-              </div>
-              );
-            })}
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            Monthly, lifetime, interview-pass, refund, and support-ticket billing flows are retired in this free app.
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div>
+              <div className="font-medium text-slate-800">Optional Robin credit checkout</div>
+              <div className="text-sm text-slate-600">Enabled only when Stripe is configured; free daily Robin access remains available separately.</div>
+            </div>
+            <ConfigBadge configured={Boolean(status?.stripe.robinCreditCheckoutReady ?? status?.stripe.checkoutReady)} />
           </div>
         </CardContent>
       </Card>
@@ -1207,13 +1197,6 @@ function BillingTab() {
             </div>
           </div>
 
-          {status?.stripe.autoCreateTestPrices && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              Test-mode price auto-creation is enabled. If explicit price IDs are missing, checkout will create or reuse
-              Stripe test prices with fixed lookup keys for the three paid plans.
-            </div>
-          )}
-
           <div className={cn(
             'rounded-lg border p-4 text-sm',
             status?.stripe.checkoutReady
@@ -1221,11 +1204,10 @@ function BillingTab() {
               : 'border-amber-200 bg-amber-50 text-amber-800'
           )}>
             <div className="font-medium">
-              {status?.stripe.checkoutReady ? 'Checkout is ready.' : 'Checkout needs Stripe test configuration.'}
+              {status?.stripe.checkoutReady ? 'Robin credit checkout is ready.' : 'Robin credit checkout needs Stripe configuration.'}
             </div>
             <p className="mt-1">
-              Required env vars: STRIPE_SECRET_KEY plus STRIPE_PRICE_ID_MONTHLY, STRIPE_PRICE_ID_LIFETIME, and STRIPE_PRICE_ID_INTERVIEW_PASS.
-              Webhooks also need STRIPE_WEBHOOK_SECRET to automatically move users from trial to paid after payment.
+              Required env var: STRIPE_SECRET_KEY. Webhooks also need STRIPE_WEBHOOK_SECRET to fulfill optional Robin credit purchases.
             </p>
           </div>
         </CardContent>
@@ -1310,7 +1292,7 @@ function PromoCodesTab() {
           icon={DollarSign}
         />
         <StatCard
-          title="Paid Users"
+          title="Legacy Conversions"
           value={totalPaidUsers.toLocaleString()}
           change=""
           trend="up"
@@ -1394,7 +1376,7 @@ function PromoCodesTab() {
                     <th className="text-left p-3 font-medium text-slate-600">Referrals</th>
                     <th className="text-left p-3 font-medium text-slate-600">Signups</th>
                     <th className="text-left p-3 font-medium text-slate-600">Purchases</th>
-                    <th className="text-left p-3 font-medium text-slate-600">Paid Users</th>
+                    <th className="text-left p-3 font-medium text-slate-600">Legacy Conversions</th>
                     <th className="text-left p-3 font-medium text-slate-600">Status</th>
                     <th className="text-left p-3 font-medium text-slate-600">Actions</th>
                   </tr>
@@ -2079,7 +2061,7 @@ function buildProviderEnvLines(provider: AdminProviderStatus) {
   }
 
   lines.push(`AI_DEFAULT_PROVIDER=${provider.provider}`);
-  lines.push('AI_FALLBACK_PROVIDERS=unified,nvidia,deepseek,anthropic,openai');
+  lines.push('AI_FALLBACK_PROVIDERS=minimax,unified,nvidia,deepseek,anthropic,openai');
 
   return lines;
 }
@@ -2127,6 +2109,8 @@ const DEFAULT_ROBIN_USAGE_SETTINGS: AdminRobinUsageSettings = {
   pauseMessage: 'Robin is temporarily paused while we tune the free app experience. Please try again soon.',
   freeMessagesRollover: false,
   paidMessagesRollover: true,
+  paidCreditPacksEnabled: false,
+  creditPacksUnavailableMessage: 'Extra Robin message packs are not available yet. Daily free messages refresh automatically each day.',
   paidCreditExpirationDays: 365,
   paidPacks: [
     { id: 'starter', label: 'Starter Pack', messages: 50, priceCents: 500, expirationDays: 365, rollover: true, active: true },
@@ -2231,7 +2215,7 @@ function AIConfigTab() {
       const current = prev || {
         defaultProvider: status?.ai.defaultProvider || 'unified',
         defaultModel: status?.ai.defaultModel || 'auto',
-        fallbackProviders: ['unified', 'nvidia', 'deepseek', 'anthropic', 'openai'],
+        fallbackProviders: ['minimax', 'unified', 'nvidia', 'deepseek', 'anthropic', 'openai'],
         providers: {},
         modelCatalog: {},
         roleAssignments: DEFAULT_ROLE_SETTINGS,
@@ -2466,7 +2450,7 @@ function AIConfigTab() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <CardTitle className="text-base">Robin Free Usage Limits</CardTitle>
-                <CardDescription>Set the daily free message limit, emergency pause, and paid message pack templates.</CardDescription>
+                <CardDescription>Set the daily free message limit, emergency pause, and message-pack controls pending processor approval.</CardDescription>
               </div>
               <Badge variant={robinUsageSettings.emergencyPause ? 'destructive' : 'secondary'} className="w-fit px-3 py-1">
                 {robinUsageSettings.emergencyPause ? 'Robin paused' : 'Robin active'}
@@ -2534,7 +2518,7 @@ function AIConfigTab() {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
                 <div>
-                  <Label className="font-bold text-slate-900">Paid messages roll over</Label>
+                  <Label className="font-bold text-slate-900">Extra message grants roll over</Label>
                   <p className="text-xs font-semibold text-slate-500">Daily free messages never roll over.</p>
                 </div>
                 <Switch
@@ -2545,9 +2529,9 @@ function AIConfigTab() {
                   } : prev)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="font-bold text-slate-900">Paid credit expiration days</Label>
-                <Input
+                <div className="space-y-2">
+                  <Label className="font-bold text-slate-900">Extra message expiration days</Label>
+                  <Input
                   type="number"
                   min={1}
                   max={3650}
@@ -2557,24 +2541,58 @@ function AIConfigTab() {
                     paidCreditExpirationDays: Number(event.target.value) || 365,
                   } : prev)}
                   className="bg-white font-semibold text-slate-950"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                <div>
+                  <Label className="font-bold text-slate-900">Robin credit-pack checkout unavailable</Label>
+                  <p className="text-xs font-semibold leading-5 text-amber-800">
+                    Hidden until Square or another processor confirms written support.
+                  </p>
+                </div>
+                <Switch
+                  checked={robinUsageSettings.paidCreditPacksEnabled}
+                  disabled
+                  onCheckedChange={(checked) => setRobinUsageSettings(prev => prev ? {
+                    ...prev,
+                    paidCreditPacksEnabled: checked,
+                  } : prev)}
                 />
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label className="font-bold text-slate-900">Credit packs unavailable message</Label>
+                <textarea
+                  value={robinUsageSettings.creditPacksUnavailableMessage}
+                  onChange={(event) => setRobinUsageSettings(prev => prev ? {
+                    ...prev,
+                    creditPacksUnavailableMessage: event.target.value,
+                  } : prev)}
+                  className="min-h-20 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
-            <Separator />
+              <Separator />
 
             <div className="space-y-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h4 className="font-extrabold text-slate-950">Paid message pack templates</h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-extrabold text-slate-950">Message pack templates unavailable</h4>
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">
+                      Pending processor approval
+                    </Badge>
+                  </div>
                   <p className="text-sm font-semibold text-slate-600">
-                    These define the top-up products shown on Robin when Stripe checkout is configured.
+                    Template controls stay disabled until payment processor approval is confirmed.
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled
                   onClick={() => setRobinUsageSettings(prev => prev ? {
                     ...prev,
                     paidPacks: [...prev.paidPacks, createRobinPack()],
@@ -2587,19 +2605,20 @@ function AIConfigTab() {
 
               <div className="grid gap-3">
                 {robinUsageSettings.paidPacks.map((pack, index) => (
-                  <div key={`${pack.id}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div key={`${pack.id}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4 opacity-70 shadow-sm">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <Badge variant={pack.active ? 'default' : 'secondary'}>{pack.active ? 'Active' : 'Inactive'}</Badge>
+                        <Badge variant="secondary">Unavailable</Badge>
                         <span className="text-xs font-semibold text-slate-500">{pack.id}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Switch checked={pack.active} onCheckedChange={(checked) => updateRobinPack(index, { active: checked })} />
+                        <Switch checked={pack.active} disabled onCheckedChange={(checked) => updateRobinPack(index, { active: checked })} />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          disabled
                           onClick={() => setRobinUsageSettings(prev => prev ? {
                             ...prev,
                             paidPacks: prev.paidPacks.filter((_, packIndex) => packIndex !== index),
@@ -2615,6 +2634,7 @@ function AIConfigTab() {
                         <Label className="font-bold text-slate-900">Pack label</Label>
                         <Input
                           value={pack.label}
+                          disabled
                           onChange={(event) => updateRobinPack(index, { label: event.target.value })}
                           className="bg-white font-semibold text-slate-950"
                         />
@@ -2625,6 +2645,7 @@ function AIConfigTab() {
                           type="number"
                           min={1}
                           value={pack.messages}
+                          disabled
                           onChange={(event) => updateRobinPack(index, { messages: Number(event.target.value) || 1 })}
                           className="bg-white font-semibold text-slate-950"
                         />
@@ -2635,6 +2656,7 @@ function AIConfigTab() {
                           type="number"
                           min={0}
                           value={pack.priceCents}
+                          disabled
                           onChange={(event) => updateRobinPack(index, { priceCents: Number(event.target.value) || 0 })}
                           className="bg-white font-semibold text-slate-950"
                         />
@@ -2645,6 +2667,7 @@ function AIConfigTab() {
                           type="number"
                           min={1}
                           value={pack.expirationDays}
+                          disabled
                           onChange={(event) => updateRobinPack(index, { expirationDays: Number(event.target.value) || 365 })}
                           className="bg-white font-semibold text-slate-950"
                         />
@@ -2653,9 +2676,9 @@ function AIConfigTab() {
                     <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
                       <div>
                         <Label className="font-bold text-slate-900">This pack rolls over</Label>
-                        <p className="text-xs font-semibold text-slate-500">Only applies to paid credits, not daily free messages.</p>
+                        <p className="text-xs font-semibold text-slate-500">Unavailable until processor approval; daily free messages never roll over.</p>
                       </div>
-                      <Switch checked={pack.rollover} onCheckedChange={(checked) => updateRobinPack(index, { rollover: checked })} />
+                      <Switch checked={pack.rollover} disabled onCheckedChange={(checked) => updateRobinPack(index, { rollover: checked })} />
                     </div>
                   </div>
                 ))}
@@ -2710,7 +2733,7 @@ function AIConfigTab() {
                 <div className="space-y-2">
                   <Label className="font-bold text-slate-900">Fallback order</Label>
                   <Input
-                    value={(aiSettings.fallbackProviders?.length ? aiSettings.fallbackProviders : ['unified', 'nvidia', 'deepseek', 'anthropic', 'openai']).join(', ')}
+                    value={(aiSettings.fallbackProviders?.length ? aiSettings.fallbackProviders : ['minimax', 'unified', 'nvidia', 'deepseek', 'anthropic', 'openai']).join(', ')}
                     onChange={(event) => setAiSettings(prev => prev ? {
                       ...prev,
                       fallbackProviders: event.target.value.split(',').map(item => item.trim()).filter(Boolean),
@@ -3241,7 +3264,7 @@ function AIConfigTab() {
                   <span className="font-mono"> AI_OPENAI_COMPATIBLE_PROVIDERS</span> when needed.
                 </p>
                 <div className="rounded-lg bg-white/85 p-3 text-xs text-slate-700 ring-1 ring-blue-100">
-                  <div><span className="font-mono">AI_FALLBACK_PROVIDERS</span>: unified,nvidia,deepseek,anthropic,openai</div>
+                  <div><span className="font-mono">AI_FALLBACK_PROVIDERS</span>: minimax,unified,nvidia,deepseek,anthropic,openai</div>
                   <div><span className="font-mono">AI_OPENAI_COMPATIBLE_PROVIDERS</span>: provider id, label, base URL env, key env, default model</div>
                 </div>
               </div>
@@ -3553,11 +3576,11 @@ function SystemTab() {
               <div className="mt-2"><ConfigBadge configured={Boolean(status?.database.urlConfigured)} /></div>
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stripe checkout</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Robin credits</div>
               <div className="mt-2"><ConfigBadge configured={Boolean(status?.stripe.checkoutReady)} /></div>
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stripe webhook</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Credit webhook</div>
               <div className="mt-2"><ConfigBadge configured={Boolean(status?.stripe.webhookReady)} /></div>
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
@@ -3565,7 +3588,7 @@ function SystemTab() {
                 <Mail className="h-3.5 w-3.5" />
                 Email
               </div>
-              <div className="mt-2"><ConfigBadge configured={Boolean(status?.email.plunkConfigured)} /></div>
+              <div className="mt-2"><ConfigBadge configured={Boolean(status?.email.configured || status?.email.resendConfigured || status?.email.plunkConfigured)} /></div>
             </div>
           </div>
 
@@ -3586,7 +3609,7 @@ function SystemTab() {
               Provider: <span className="font-medium">{status?.email.provider || 'Not loaded'}</span>
             </div>
             <div className="mt-1">
-              Welcome, password reset, and purchase confirmation emails use the configured server email provider.
+              Welcome, password reset, and optional Robin credit confirmation emails use the configured server email provider.
             </div>
             {status?.email.fromAddress && (
               <div className="mt-2 break-all">From: {status.email.fromAddress}</div>
@@ -3604,8 +3627,8 @@ function SystemTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-            Test-mode payments require matching Stripe test price IDs in Coolify. Once checkout succeeds,
-            the Stripe webhook is what updates the user subscription from trial to paid in the database.
+            Core app access is free. Stripe is only used for optional Robin credit packs, and the webhook only fulfills
+            extra-message ledger entries after a confirmed credit-pack checkout.
           </div>
           <div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-600">
             Robin's provider keys and fallback models can be managed in the AI API Configuration tab. Coolify environment
@@ -3622,6 +3645,19 @@ function formatBroadcastRate(value: number | undefined) {
   const rate = Number(value || 0);
   return `${rate >= 10 || Number.isInteger(rate) ? rate.toFixed(0) : rate.toFixed(1)}%`;
 }
+
+const ADMIN_BROADCAST_AUDIENCE_OPTIONS: Array<{ value: BroadcastAudience; label: string }> = [
+  { value: 'all_users', label: 'Everyone using the free app' },
+  { value: 'free_users', label: 'Signed-in free users' },
+  { value: 'robin_users', label: 'Robin users today' },
+  { value: 'unread_message_users', label: 'Users with unread messages' },
+  { value: 'reengagement_users', label: 'Re-engagement users' },
+];
+
+const ADMIN_BROADCAST_AUDIENCE_LABELS = ADMIN_BROADCAST_AUDIENCE_OPTIONS.reduce(
+  (labels, option) => ({ ...labels, [option.value]: option.label }),
+  {} as Record<BroadcastAudience, string>
+);
 
 function escapeHtml(value: string) {
   return value
@@ -4034,11 +4070,9 @@ function BroadcastsTab() {
                     value={newBroadcast.audienceType}
                     onChange={(e) => setNewBroadcast(prev => ({ ...prev, audienceType: e.target.value as BroadcastAudience }))}
                   >
-                    <option value="all_users">All Users</option>
-                    <option value="free_users">Free Members</option>
-                    <option value="trial_users">Trial Users</option>
-                    <option value="premium_users">Pro / Paid Members</option>
-                    <option value="expired_users">Expired Subscriptions</option>
+                    {ADMIN_BROADCAST_AUDIENCE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -4245,7 +4279,7 @@ function BroadcastsTab() {
                         <RichMessageContent content={broadcast.message} />
                       </div>
                       <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                        <span>Audience: {BROADCAST_AUDIENCE_LABELS[broadcast.audienceType]}</span>
+                        <span>Audience: {ADMIN_BROADCAST_AUDIENCE_LABELS[broadcast.audienceType]}</span>
                         <span>Sent to: {broadcast.sentCount.toLocaleString()} users</span>
                         <span>Created: {new Date(broadcast.createdAt).toLocaleDateString()}</span>
                         {broadcast.scheduledAt && <span>Scheduled: {new Date(broadcast.scheduledAt).toLocaleString()}</span>}
@@ -4556,7 +4590,7 @@ function LiveSupportTicketsTab({
                         ? `${selectedTicket.retentionOffer.label} at $${selectedTicket.retentionOffer.amount.toFixed(2)}`
                         : 'No lower-cost offer recommended for this plan.'}
                     </p>
-                    <p className="mt-1 text-xs">{selectedTicket.subscription?.planLabel || 'Plan unknown'} - {selectedTicket.subscription?.status || 'unknown'}</p>
+                    <p className="mt-1 text-xs">Archived billing context retained for retired support workflows.</p>
                   </div>
                 </div>
               )}

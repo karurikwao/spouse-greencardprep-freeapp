@@ -50,6 +50,7 @@ export interface AdminUsersResponse {
     totalUsers: number;
     paidUsers: number;
     trialUsers: number;
+    freeUsers?: number;
     usersWithOpenTickets: number;
     robinActiveToday: number;
     usersWithUnreadMessages: number;

@@ -142,18 +142,10 @@ export interface AdminRobinUsageSettings {
   pauseMessage: string;
   freeMessagesRollover: boolean;
   paidMessagesRollover: boolean;
+  paidCreditPacksEnabled: boolean;
+  creditPacksUnavailableMessage: string;
   paidCreditExpirationDays: number;
   paidPacks: AdminRobinMessagePack[];
-}
-
-export interface AdminStripePriceStatus {
-  planType: 'monthly' | 'lifetime' | 'interviewPass';
-  label: string;
-  configured: boolean;
-  envVar: string;
-  expectedAmount: number;
-  currency: string;
-  mode: 'subscription' | 'payment';
 }
 
 export interface AdminSystemStatus {
@@ -171,16 +163,18 @@ export interface AdminSystemStatus {
     secretKeyConfigured: boolean;
     publishableKeyConfigured: boolean;
     webhookConfigured: boolean;
-    autoCreateTestPrices: boolean;
+    robinCreditCheckoutReady?: boolean;
     checkoutReady: boolean;
     webhookReady: boolean;
-    prices: Record<'monthly' | 'lifetime' | 'interviewPass', AdminStripePriceStatus>;
+    retiredPaidPlanCheckout?: boolean;
   };
   database: {
     urlConfigured: boolean;
   };
   email: {
-    provider: 'plunk' | 'dev';
+    provider: 'resend' | 'plunk' | 'dev';
+    configured?: boolean;
+    resendConfigured?: boolean;
     plunkConfigured: boolean;
     fromConfigured: boolean;
     fromAddress: string;

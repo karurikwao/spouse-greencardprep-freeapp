@@ -57,6 +57,7 @@ api_bp = Blueprint('api', __name__)
 
 
 RETIRED_FREE_APP_RPC_FUNCTIONS = {
+    'create_or_update_subscription',
     'create_support_ticket',
     'get_user_tickets_with_replies',
     'get_open_tickets_for_admin',
@@ -76,15 +77,226 @@ TABLES_WITH_USER_ID = {
     'user_profiles', 'user_subscriptions', 'user_progress',
     'ai_daily_usage', 'ai_session_tracking',
     'pdf_download_events', 'pdf_download_summaries',
-    'content_dismissals', 'user_notifications',
+    'content_dismissals', 'content_interactions', 'user_notifications',
     'refund_requests', 'support_tickets', 'question_states',
+    'partner_connections', 'partner_progress', 'partner_settings',
+    'user_topic_progress', 'user_preferences', 'referral_events',
+    'answer_example_candidates',
+}
+
+AUTO_USER_SCOPE_TABLES = set(TABLES_WITH_USER_ID)
+
+GENERIC_TABLE_READ_TABLES = {
+    'user_profiles', 'user_subscriptions', 'plan_config',
+    'user_progress', 'ai_daily_usage', 'ai_session_tracking',
+    'pdf_assets', 'pdf_download_events', 'pdf_download_summaries',
+    'site_announcements', 'site_trust_snippets', 'site_content_blocks',
+    'content_dismissals', 'content_interactions',
+    'seo_settings', 'seo_expansion_settings', 'seo_expansion_pages',
+    'seo_expansion_scheduler_runs', 'seo_expansion_rebuild_attempts',
+    'site_verification_codes', 'refund_requests',
+    'user_notifications', 'broadcast_messages', 'support_tickets',
+    'promo_codes', 'referral_events',
+    'answer_example_candidates', 'stripe_webhook_events',
+    'question_states', 'download_stats', 'ad_settings',
+    'partner_connections', 'partner_progress', 'partner_settings',
+    'users', 'user_topic_progress', 'user_preferences',
+}
+
+GENERIC_TABLE_ADMIN_READ_TABLES = {
+    'pdf_download_events', 'pdf_download_summaries',
+    'ai_daily_usage', 'ai_session_tracking',
+    'site_announcements', 'site_trust_snippets', 'site_content_blocks',
+    'content_interactions', 'seo_expansion_scheduler_runs',
+    'seo_expansion_rebuild_attempts', 'refund_requests',
+    'broadcast_messages', 'support_tickets',
+    'answer_example_candidates', 'stripe_webhook_events',
+    'promo_codes', 'referral_events',
+    'partner_connections', 'partner_progress', 'partner_settings',
+    'users', 'site_verification_codes',
+    'download_stats', 'ad_settings',
+}
+
+GENERIC_TABLE_INSERT_TABLES = {
+    'content_dismissals', 'content_interactions',
+    'referral_events', 'user_progress', 'question_states',
+    'broadcast_messages',
+    'site_announcements', 'site_trust_snippets', 'site_content_blocks',
+    'site_verification_codes', 'answer_example_candidates',
+    'pdf_download_events', 'promo_codes',
+    'user_notifications',
     'partner_connections', 'partner_progress', 'partner_settings',
     'user_topic_progress', 'user_preferences',
 }
 
-AUTO_USER_SCOPE_TABLES = TABLES_WITH_USER_ID - {
+GENERIC_TABLE_UPDATE_TABLES = {
+    'user_profiles', 'user_progress',
+    'content_dismissals', 'user_notifications', 'question_states',
+    'ad_settings', 'seo_settings', 'seo_expansion_pages',
+    'seo_expansion_settings',
+    'broadcast_messages',
+    'site_announcements', 'site_trust_snippets', 'site_content_blocks',
+    'site_verification_codes', 'answer_example_candidates',
+    'pdf_download_events', 'promo_codes',
     'partner_connections', 'partner_progress', 'partner_settings',
+    'user_topic_progress', 'user_preferences',
 }
+
+GENERIC_TABLE_DELETE_TABLES = {
+    'content_dismissals', 'site_announcements', 'site_trust_snippets',
+    'site_content_blocks', 'broadcast_messages', 'promo_codes',
+    'answer_example_candidates', 'partner_connections',
+    'partner_progress', 'partner_settings', 'user_notifications',
+}
+
+GENERIC_TABLE_ADMIN_WRITE_TABLES = {
+    'broadcast_messages', 'site_announcements', 'site_trust_snippets',
+    'site_content_blocks', 'site_verification_codes', 'promo_codes',
+    'pdf_download_events', 'answer_example_candidates',
+    'ad_settings', 'seo_settings', 'seo_expansion_pages', 'seo_expansion_settings',
+}
+
+GENERIC_TABLE_READ_COLUMNS = {
+    'users': {'id', 'email', 'created_at', 'updated_at', 'last_sign_in_at'},
+}
+
+GENERIC_TABLE_USER_WRITE_COLUMNS = {
+    'user_profiles': {'first_name', 'last_name', 'display_name', 'updated_at'},
+    'user_progress': {
+        'user_id', 'questions_practiced', 'ai_turns', 'readiness_score',
+        'current_streak', 'longest_streak', 'last_practice_date',
+        'topic_progress', 'updated_at',
+    },
+    'content_dismissals': {
+        'user_id', 'content_type', 'content_id', 'dismissed_at',
+        'placement', 'metadata', 'created_at',
+    },
+    'content_interactions': {
+        'user_id', 'content_type', 'content_id', 'interaction_type',
+        'placement', 'session_id', 'user_agent_hash', 'metadata', 'created_at',
+    },
+    'referral_events': {
+        'user_id', 'promo_code', 'referrer', 'landing_page',
+        'event_type', 'metadata', 'created_at',
+    },
+    'question_states': {
+        'user_id', 'question_id', 'topic_id', 'comfort_status',
+        'is_saved_for_later', 'last_reviewed_at', 'created_at', 'updated_at',
+    },
+    'user_notifications': {'user_id', 'is_read', 'dismissed_at', 'updated_at'},
+    'partner_connections': {
+        'user_id', 'partner_id', 'status', 'partner_email', 'partner_name',
+        'accepted_at', 'disconnected_at',
+    },
+    'partner_progress': {
+        'user_id', 'question_states', 'current_topic', 'last_updated',
+    },
+    'partner_settings': {
+        'user_id', 'share_progress', 'share_saved_questions', 'share_stats',
+        'allow_partner_answers', 'updated_at',
+    },
+    'user_topic_progress': {
+        'user_id', 'topic_id', 'current_question_index',
+        'is_completed', 'created_at', 'updated_at',
+    },
+    'user_preferences': {'user_id', 'preferences', 'created_at', 'updated_at'},
+}
+
+GENERIC_TABLE_ADMIN_WRITE_COLUMNS = {
+    **GENERIC_TABLE_USER_WRITE_COLUMNS,
+    'user_profiles': {
+        'email', 'first_name', 'last_name', 'display_name',
+        'role', 'is_active', 'updated_at',
+    },
+    'broadcast_messages': {
+        'title', 'message', 'audience_type', 'is_active', 'sent_count',
+        'scheduled_at', 'send_email', 'metadata', 'created_by', 'updated_at',
+    },
+    'site_announcements': {
+        'title', 'body', 'announcement_type', 'placement', 'target_audience',
+        'status', 'priority', 'is_dismissible', 'cta_text', 'cta_link',
+        'starts_at', 'ends_at', 'created_by', 'updated_by', 'updated_at',
+        'view_count',
+    },
+    'site_trust_snippets': {
+        'title', 'subtitle', 'icon_name', 'placement', 'target_audience',
+        'status', 'priority', 'cta_text', 'cta_link', 'starts_at', 'ends_at',
+        'created_by', 'updated_by', 'updated_at', 'view_count',
+    },
+    'site_content_blocks': {
+        'title', 'body', 'block_type', 'group_key', 'group_order', 'placement',
+        'target_audience', 'status', 'priority', 'cta_text', 'cta_link',
+        'starts_at', 'ends_at', 'created_by', 'updated_by', 'updated_at',
+        'view_count',
+    },
+    'site_verification_codes': {
+        'placement', 'code', 'is_enabled', 'notes', 'environment',
+        'created_by', 'updated_by', 'updated_at',
+    },
+    'answer_example_candidates': {
+        'user_id', 'question_id', 'question_slug', 'question_prompt',
+        'original_answer', 'sanitized_answer', 'category', 'answer_pattern',
+        'quality_score', 'quality_reason', 'review_status', 'reviewer_notes',
+        'reviewed_by', 'reviewed_at', 'approved_for_publication',
+        'published_at', 'published_slug', 'source_session_id',
+        'source_turn_number', 'updated_at',
+    },
+    'pdf_download_events': {
+        'user_id', 'user_email', 'pdf_filename', 'pdf_title', 'topic_id',
+        'category_id', 'download_source', 'event_status', 'delivery_method',
+        'access_granted', 'session_hash', 'user_agent_hash',
+    },
+    'promo_codes': {
+        'code', 'description', 'discount_percent', 'influencer_name',
+        'is_active', 'updated_at',
+    },
+    'ad_settings': {'id', 'settings', 'updated_at'},
+    'seo_settings': {'id', 'sitemap_frequency', 'updated_at'},
+    'seo_expansion_settings': {
+        'id', 'pattern_pages_enabled', 'situation_pages_enabled',
+        'include_in_sitemap', 'noindex_until_approved',
+        'recommended_activation_months', 'scheduler_enabled',
+        'scheduler_frequency', 'scheduler_page_count_mode',
+        'scheduler_fixed_page_count', 'scheduler_random_min_pages',
+        'scheduler_random_max_pages', 'scheduler_only_publish_approved',
+        'scheduler_auto_include_in_sitemap', 'launch_date',
+        'reminder_banner_enabled', 'admin_notes', 'last_sitemap_sync_at',
+        'last_deploy_triggered_at', 'last_deploy_status', 'updated_at',
+        'updated_by',
+    },
+    'seo_expansion_pages': {
+        'slug', 'page_type', 'parent_cluster', 'status', 'is_enabled',
+        'is_published', 'include_in_sitemap', 'noindex_override',
+        'sitemap_synced_at', 'is_in_live_sitemap', 'reviewed_at',
+        'reviewed_by', 'approved_at', 'approved_by', 'published_at',
+        'published_by', 'unpublished_at', 'unpublished_by', 'notes',
+        'view_count', 'updated_at',
+    },
+}
+
+GENERIC_TABLE_CONFLICT_COLUMNS = {
+    'user_progress': {'user_id'},
+    'question_states': {'user_id', 'question_id'},
+    'user_topic_progress': {'user_id', 'topic_id'},
+    'user_preferences': {'user_id'},
+    'content_dismissals': {'user_id', 'content_type', 'content_id'},
+    'partner_connections': {'user_id', 'partner_id'},
+    'partner_progress': {'user_id'},
+    'partner_settings': {'user_id'},
+    'ad_settings': {'id'},
+    'seo_settings': {'id'},
+    'seo_expansion_settings': {'id'},
+    'site_verification_codes': {'placement', 'environment'},
+    'promo_codes': {'code'},
+}
+
+GENERIC_TABLE_RETIRED_WRITE_TABLES = {
+    'refund_requests',
+    'support_tickets',
+    'user_subscriptions',
+}
+
+GENERIC_TABLE_FILTER_OPS = {'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'in', 'is'}
 
 
 def _is_admin_user(user):
@@ -121,6 +333,30 @@ def _allowed_columns_for_table(table_name):
     return columns
 
 
+def _allowed_columns_for_operation(table_name, operation, *, is_admin=False):
+    table_name = _validate_identifier(table_name, 'table name')
+    schema_columns = _allowed_columns_for_table(table_name)
+
+    if operation == 'read':
+        policy_columns = GENERIC_TABLE_READ_COLUMNS.get(table_name)
+        return schema_columns if policy_columns is None else schema_columns & policy_columns
+
+    if operation in ('insert', 'update'):
+        policy = (
+            GENERIC_TABLE_ADMIN_WRITE_COLUMNS
+            if is_admin
+            else GENERIC_TABLE_USER_WRITE_COLUMNS
+        )
+        policy_columns = policy.get(table_name)
+        return schema_columns & policy_columns if policy_columns else set()
+
+    if operation == 'conflict':
+        policy_columns = GENERIC_TABLE_CONFLICT_COLUMNS.get(table_name)
+        return schema_columns & policy_columns if policy_columns else set()
+
+    raise ValueError(f'Unsupported column operation {operation}')
+
+
 def _validate_column(table_name, column_name, label='column'):
     column = _validate_identifier(column_name, label)
     if column not in _allowed_columns_for_table(table_name):
@@ -132,19 +368,68 @@ def _quote_column(table_name, column_name, label='column'):
     return _quote_identifier(_validate_column(table_name, column_name, label))
 
 
-def _parse_select_clause(table_name, select_value):
+def _validate_column_for_operation(table_name, column_name, operation, *, is_admin=False, label='column'):
+    column = _validate_identifier(column_name, label)
+    allowed_columns = _allowed_columns_for_operation(table_name, operation, is_admin=is_admin)
+    if column not in allowed_columns:
+        raise ValueError(f'Column {column} is not allowed for {table_name}')
+    return column
+
+
+def _quote_column_for_operation(table_name, column_name, operation, *, is_admin=False, label='column'):
+    return _quote_identifier(
+        _validate_column_for_operation(
+            table_name,
+            column_name,
+            operation,
+            is_admin=is_admin,
+            label=label,
+        )
+    )
+
+
+def _parse_select_clause(table_name, select_value, *, is_admin=False):
     raw = str(select_value or '*').strip()
+    allowed_columns = _allowed_columns_for_operation(table_name, 'read', is_admin=is_admin)
     if raw == '*':
-        return '*'
+        if not allowed_columns:
+            raise ValueError(f'No readable columns are allowed for {table_name}')
+        return ', '.join(_quote_identifier(column) for column in sorted(allowed_columns))
     columns = []
     for part in raw.split(','):
         column = part.strip()
         if not column:
             continue
-        columns.append(_quote_column(table_name, column, 'select column'))
+        columns.append(
+            _quote_column_for_operation(
+                table_name,
+                column,
+                'read',
+                is_admin=is_admin,
+                label='select column',
+            )
+        )
     if not columns:
         raise ValueError('At least one select column is required')
     return ', '.join(columns)
+
+
+def _parse_generic_filters(filters_json):
+    if not filters_json:
+        return []
+    try:
+        parsed_filters = json.loads(filters_json)
+    except (json.JSONDecodeError, TypeError):
+        raise ValueError('filters must be a JSON array')
+    if not isinstance(parsed_filters, list):
+        raise ValueError('filters must be a JSON array')
+    for filter_item in parsed_filters:
+        if not isinstance(filter_item, dict):
+            raise ValueError('filters entries must be objects')
+        op = filter_item.get('op', 'eq')
+        if op not in GENERIC_TABLE_FILTER_OPS:
+            raise ValueError(f'Unsupported filter op {op}')
+    return parsed_filters
 
 
 def _request_client_metadata(extra=None):
@@ -363,12 +648,14 @@ def _public_ai_runtime_config(config=None):
             'apiKeyConfigured': bool(api_key),
             'apiKeyMasked': _mask_secret(api_key),
         }
+    model_catalog = _sanitize_model_catalog(config.get('modelCatalog'))
+    model_catalog.setdefault('minimax', MINIMAX_MODEL_CATALOG)
     return {
         'defaultProvider': config.get('defaultProvider') or config.get('default_provider') or '',
         'defaultModel': config.get('defaultModel') or config.get('default_model') or '',
         'fallbackProviders': config.get('fallbackProviders') or config.get('fallback_providers') or [],
         'providers': public_providers,
-        'modelCatalog': _sanitize_model_catalog(config.get('modelCatalog')),
+        'modelCatalog': model_catalog,
         'roleAssignments': _public_role_assignments(config),
     }
 
@@ -585,7 +872,7 @@ def call_rpc(func_name):
     param_mapping = {
         'is_admin': {'p_user_id': lambda: user['id']},
         'is_superadmin': {'p_user_id': lambda: user['id']},
-        'get_effective_subscription': {'p_user_id': lambda: data.get('p_user_id', user['id'])},
+        'get_effective_subscription': {'p_user_id': lambda: user['id']},
         'check_ai_usage_limits': {'p_user_id': lambda: user['id']},
         'record_ai_session_start': {
             'p_user_id': lambda: user['id'],
@@ -663,17 +950,6 @@ def call_rpc(func_name):
             'p_metadata': lambda: json.dumps(data.get('metadata', {})) if isinstance(data.get('metadata'), dict) else data.get('metadata', '{}'),
         },
         'increment_expansion_page_views': {'p_slug': lambda: data.get('slug')},
-        'create_or_update_subscription': {
-            'p_user_id': lambda: data.get('userId', user['id'] if user else None),
-            'p_plan_type': lambda: data.get('planType'),
-            'p_status': lambda: data.get('status', 'active'),
-            'p_provider': lambda: data.get('provider', 'internal'),
-            'p_provider_customer_id': lambda: data.get('providerCustomerId'),
-            'p_provider_subscription_id': lambda: data.get('providerSubscriptionId'),
-            'p_trial_ends_at': lambda: data.get('trialEndsAt'),
-            'p_current_period_ends_at': lambda: data.get('currentPeriodEndsAt'),
-            'p_metadata': lambda: json.dumps(data.get('metadata', {})) if isinstance(data.get('metadata'), dict) else data.get('metadata', '{}'),
-        },
     'update_seo_expansion_page_status': {
       'p_slug': lambda: data.get('slug'),
       'p_status': lambda: data.get('status'),
@@ -814,56 +1090,16 @@ def call_rpc(func_name):
 @optional_auth
 def query_table(table_name):
     user = request.current_user
+    is_admin = _is_admin_user(user)
 
-    allowed_tables_read = {
-        'user_profiles', 'user_subscriptions', 'plan_config',
-        'user_progress', 'ai_daily_usage', 'ai_session_tracking',
-        'pdf_assets', 'pdf_download_events', 'pdf_download_summaries',
-        'site_announcements', 'site_trust_snippets', 'site_content_blocks',
-        'content_dismissals', 'content_interactions',
-        'seo_settings', 'seo_expansion_settings', 'seo_expansion_pages',
-        'seo_expansion_scheduler_runs', 'seo_expansion_rebuild_attempts',
-        'site_verification_codes', 'refund_requests',
-        'user_notifications', 'broadcast_messages', 'support_tickets',
-        'promo_codes', 'referral_events',
-        'answer_example_candidates', 'stripe_webhook_events',
-        'question_states', 'download_stats', 'ad_settings',
-        'partner_connections', 'partner_progress', 'partner_settings',
-        'users', 'user_topic_progress', 'user_preferences',
-    }
-
-    if table_name not in allowed_tables_read:
+    if table_name not in GENERIC_TABLE_READ_TABLES:
         return jsonify({'error': f'Table {table_name} not accessible'}), 404
 
-    admin_only_tables = {
-        'pdf_download_events', 'pdf_download_summaries',
-        'ai_daily_usage', 'ai_session_tracking',
-        'site_announcements', 'site_trust_snippets', 'site_content_blocks',
-        'content_interactions', 'seo_expansion_scheduler_runs',
-        'seo_expansion_rebuild_attempts', 'refund_requests',
-        'broadcast_messages', 'support_tickets',
-        'answer_example_candidates', 'stripe_webhook_events',
-        'promo_codes', 'referral_events',
-        'partner_connections', 'partner_progress', 'partner_settings',
-        'users', 'site_verification_codes',
-        'download_stats', 'ad_settings',
-    }
-
-    if table_name in admin_only_tables:
-        if not _is_admin_user(user):
+    if table_name in GENERIC_TABLE_ADMIN_READ_TABLES:
+        if not is_admin:
             return jsonify({'error': 'Admin access required'}), 403
 
-    user_scoped_tables = {
-        'user_profiles', 'user_subscriptions', 'user_progress',
-        'ai_daily_usage', 'ai_session_tracking',
-        'pdf_download_events', 'pdf_download_summaries',
-        'content_dismissals', 'user_notifications',
-        'refund_requests', 'support_tickets', 'question_states',
-        'partner_connections', 'partner_progress', 'partner_settings',
-        'user_topic_progress', 'user_preferences',
-    }
-
-    if table_name in user_scoped_tables and not user:
+    if table_name in TABLES_WITH_USER_ID and not user:
         return jsonify({'error': 'Authentication required'}), 401
 
     select = request.args.get('select', '*')
@@ -880,78 +1116,81 @@ def query_table(table_name):
 
     try:
         quoted_table = _quote_identifier(table_name)
-        select_clause = _parse_select_clause(table_name, select)
+        select_clause = _parse_select_clause(table_name, select, is_admin=is_admin)
         sql = f"SELECT {select_clause} FROM {quoted_table}"
         conditions = []
         params = []
 
-        if table_name in AUTO_USER_SCOPE_TABLES and not _is_admin_user(user):
+        if table_name in AUTO_USER_SCOPE_TABLES and not is_admin:
             if 'user_id' not in _allowed_columns_for_table(table_name):
                 return jsonify({'error': 'User scoped table is missing user_id'}), 500
-            conditions.append(f"{_quote_column(table_name, 'user_id')} = %s")
-            params.append(user['id'])
+            if table_name == 'partner_connections' and 'partner_id' in _allowed_columns_for_table(table_name):
+                conditions.append(
+                    f"({_quote_column_for_operation(table_name, 'user_id', 'read')} = %s "
+                    f"OR {_quote_column_for_operation(table_name, 'partner_id', 'read')} = %s)"
+                )
+                params.extend([user['id'], user['id']])
+            else:
+                conditions.append(f"{_quote_column_for_operation(table_name, 'user_id', 'read')} = %s")
+                params.append(user['id'])
 
         if eq_col and eq_val is not None:
-            conditions.append(f"{_quote_column(table_name, eq_col, 'eq column')} = %s")
+            conditions.append(
+                f"{_quote_column_for_operation(table_name, eq_col, 'read', label='eq column')} = %s"
+            )
             params.append(eq_val)
 
         if filter_col and filter_val:
-            conditions.append(f"{_quote_column(table_name, filter_col, 'filter column')} = %s")
+            conditions.append(
+                f"{_quote_column_for_operation(table_name, filter_col, 'read', label='filter column')} = %s"
+            )
             params.append(filter_val)
 
-        if filters_json:
-            try:
-                parsed_filters = json.loads(filters_json)
-            except (json.JSONDecodeError, TypeError):
-                parsed_filters = []
-            if not isinstance(parsed_filters, list):
-                parsed_filters = []
-            for f in parsed_filters:
-                if not isinstance(f, dict):
-                    continue
-                op = f.get('op', 'eq')
-                col = f.get('col')
-                val = f.get('val')
-                if not col:
-                    continue
-                quoted_col = _quote_column(table_name, col, 'filter column')
-                if op == 'eq':
-                    conditions.append(f"{quoted_col} = %s")
-                    params.append(str(val))
-                elif op == 'neq':
-                    conditions.append(f"{quoted_col} != %s")
-                    params.append(str(val))
-                elif op == 'gt':
-                    conditions.append(f"{quoted_col} > %s")
-                    params.append(str(val))
-                elif op == 'gte':
-                    conditions.append(f"{quoted_col} >= %s")
-                    params.append(str(val))
-                elif op == 'lt':
-                    conditions.append(f"{quoted_col} < %s")
-                    params.append(str(val))
-                elif op == 'lte':
-                    conditions.append(f"{quoted_col} <= %s")
-                    params.append(str(val))
-                elif op == 'like':
-                    conditions.append(f"{quoted_col} LIKE %s")
-                    params.append(str(val))
-                elif op == 'ilike':
-                    conditions.append(f"{quoted_col} ILIKE %s")
-                    params.append(str(val))
-                elif op == 'in' and isinstance(val, list):
-                    if not val:
-                        conditions.append('1 = 0')
-                    else:
-                        placeholders = ', '.join(['%s'] * len(val))
-                        conditions.append(f"{quoted_col} IN ({placeholders})")
-                        params.extend([str(v) for v in val])
-                elif op == 'is':
-                    if val is None or str(val).lower() == 'null':
-                        conditions.append(f"{quoted_col} IS NULL")
-                    else:
-                        conditions.append(f"{quoted_col} IS %s")
-                        params.append(str(val))
+        for f in _parse_generic_filters(filters_json):
+            op = f.get('op', 'eq')
+            col = f.get('col')
+            val = f.get('val')
+            if not col:
+                raise ValueError('filters entries must include col')
+            quoted_col = _quote_column_for_operation(table_name, col, 'read', label='filter column')
+            if op == 'eq':
+                conditions.append(f"{quoted_col} = %s")
+                params.append(str(val))
+            elif op == 'neq':
+                conditions.append(f"{quoted_col} != %s")
+                params.append(str(val))
+            elif op == 'gt':
+                conditions.append(f"{quoted_col} > %s")
+                params.append(str(val))
+            elif op == 'gte':
+                conditions.append(f"{quoted_col} >= %s")
+                params.append(str(val))
+            elif op == 'lt':
+                conditions.append(f"{quoted_col} < %s")
+                params.append(str(val))
+            elif op == 'lte':
+                conditions.append(f"{quoted_col} <= %s")
+                params.append(str(val))
+            elif op == 'like':
+                conditions.append(f"{quoted_col} LIKE %s")
+                params.append(str(val))
+            elif op == 'ilike':
+                conditions.append(f"{quoted_col} ILIKE %s")
+                params.append(str(val))
+            elif op == 'in':
+                if not isinstance(val, list):
+                    raise ValueError('in filter value must be an array')
+                if not val:
+                    conditions.append('1 = 0')
+                else:
+                    placeholders = ', '.join(['%s'] * len(val))
+                    conditions.append(f"{quoted_col} IN ({placeholders})")
+                    params.extend([str(v) for v in val])
+            elif op == 'is':
+                if val is None or str(val).lower() == 'null':
+                    conditions.append(f"{quoted_col} IS NULL")
+                else:
+                    raise ValueError('is filter only supports null')
 
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
@@ -959,7 +1198,10 @@ def query_table(table_name):
         if order:
             direction = 'DESC' if order.startswith('-') else 'ASC'
             col = order.lstrip('-')
-            sql += f" ORDER BY {_quote_column(table_name, col, 'order column')} {direction}"
+            sql += (
+                f" ORDER BY "
+                f"{_quote_column_for_operation(table_name, col, 'read', label='order column')} {direction}"
+            )
 
         if single:
             sql += " LIMIT 1"
@@ -981,29 +1223,16 @@ def query_table(table_name):
 @require_auth
 def insert_table(table_name):
     user = request.current_user
+    is_admin = _is_admin_user(user)
     data = request.get_json()
 
-    allowed_tables_write = {
-        'content_dismissals', 'content_interactions',
-        'referral_events', 'user_progress', 'question_states',
-        'broadcast_messages', 'support_tickets',
-        'site_announcements', 'site_trust_snippets', 'site_content_blocks',
-        'site_verification_codes', 'answer_example_candidates',
-        'pdf_download_events', 'promo_codes',
-        'refund_requests', 'user_notifications',
-        'partner_connections', 'partner_progress', 'partner_settings',
-        'user_topic_progress', 'user_preferences',
-    }
+    if table_name in GENERIC_TABLE_RETIRED_WRITE_TABLES:
+        return jsonify({'error': f'Generic writes are retired for {table_name}'}), 410
 
-    if table_name not in allowed_tables_write:
+    if table_name not in GENERIC_TABLE_INSERT_TABLES:
         return jsonify({'error': f'Cannot insert into {table_name}'}), 403
 
-    admin_only_write_tables = {
-        'broadcast_messages', 'site_announcements', 'site_trust_snippets',
-        'site_content_blocks', 'site_verification_codes', 'promo_codes',
-        'pdf_download_events', 'answer_example_candidates',
-    }
-    if table_name in admin_only_write_tables and not _is_admin_user(user):
+    if table_name in GENERIC_TABLE_ADMIN_WRITE_TABLES and not is_admin:
         return jsonify({'error': 'Admin access required'}), 403
 
     if isinstance(data, list) and len(data) == 1:
@@ -1012,7 +1241,7 @@ def insert_table(table_name):
     if not isinstance(data, dict) or not data:
         return jsonify({'error': 'Request body must be a non-empty object'}), 400
 
-    if table_name in AUTO_USER_SCOPE_TABLES and not _is_admin_user(user):
+    if table_name in AUTO_USER_SCOPE_TABLES and not is_admin:
         requested_user_id = str(data.get('user_id') or user['id'])
         if requested_user_id != str(user['id']):
             return jsonify({'error': 'Can only write your own rows'}), 403
@@ -1026,15 +1255,37 @@ def insert_table(table_name):
 
     try:
         quoted_table = _quote_identifier(table_name)
-        columns = ', '.join(_quote_column(table_name, key, 'insert column') for key in data.keys())
+        insert_names = [
+            _validate_column_for_operation(
+                table_name,
+                key,
+                'insert',
+                is_admin=is_admin,
+                label='insert column',
+            )
+            for key in data.keys()
+        ]
+        columns = ', '.join(_quote_identifier(key) for key in insert_names)
         placeholders = ', '.join(['%s'] * len(data))
         values = list(data.values())
         if is_upsert and on_conflict:
-            conflict_names = [_validate_column(table_name, col.strip(), 'conflict column') for col in on_conflict.split(',') if col.strip()]
+            conflict_names = [
+                _validate_column_for_operation(
+                    table_name,
+                    col.strip(),
+                    'conflict',
+                    is_admin=is_admin,
+                    label='conflict column',
+                )
+                for col in on_conflict.split(',')
+                if col.strip()
+            ]
             if not conflict_names:
                 return jsonify({'error': 'onConflict must include at least one column'}), 400
+            if any(col not in insert_names for col in conflict_names):
+                return jsonify({'error': 'onConflict columns must be included in the request body'}), 400
             conflict_cols = ', '.join(_quote_identifier(col) for col in conflict_names)
-            update_cols = [key for key in data.keys() if key not in conflict_names]
+            update_cols = [key for key in insert_names if key not in conflict_names]
             update_sets = ', '.join(
                 f"{_quote_identifier(key)} = EXCLUDED.{_quote_identifier(key)}"
                 for key in update_cols
@@ -1062,33 +1313,16 @@ def insert_table(table_name):
 @require_auth
 def update_table(table_name):
     user = request.current_user
+    is_admin = _is_admin_user(user)
     data = request.get_json()
 
-    allowed_tables_update = {
-        'user_profiles', 'user_subscriptions', 'user_progress',
-        'content_dismissals', 'user_notifications', 'question_states',
-        'ad_settings', 'seo_settings', 'seo_expansion_pages',
-        'seo_expansion_settings',
-        'broadcast_messages', 'support_tickets',
-        'site_announcements', 'site_trust_snippets', 'site_content_blocks',
-        'site_verification_codes', 'answer_example_candidates',
-        'pdf_download_events', 'promo_codes',
-        'refund_requests',
-        'partner_connections', 'partner_progress', 'partner_settings',
-        'user_topic_progress', 'user_preferences',
-    }
+    if table_name in GENERIC_TABLE_RETIRED_WRITE_TABLES:
+        return jsonify({'error': f'Generic writes are retired for {table_name}'}), 410
 
-    if table_name not in allowed_tables_update:
+    if table_name not in GENERIC_TABLE_UPDATE_TABLES:
         return jsonify({'error': f'Cannot update {table_name}'}), 403
 
-    admin_only_update_tables = {
-        'broadcast_messages', 'site_announcements', 'site_trust_snippets',
-        'site_content_blocks', 'site_verification_codes', 'promo_codes',
-        'pdf_download_events', 'answer_example_candidates', 'refund_requests',
-        'support_tickets',
-        'ad_settings', 'seo_settings', 'seo_expansion_pages', 'seo_expansion_settings',
-    }
-    if table_name in admin_only_update_tables and not _is_admin_user(user):
+    if table_name in GENERIC_TABLE_ADMIN_WRITE_TABLES and not is_admin:
         return jsonify({'error': 'Admin access required'}), 403
 
     eq_col = request.args.get('eq')
@@ -1104,7 +1338,9 @@ def update_table(table_name):
     if not isinstance(data, dict) or not data:
         return jsonify({'error': 'Request body must be a non-empty object'}), 400
 
-    if table_name in AUTO_USER_SCOPE_TABLES and not _is_admin_user(user):
+    if table_name in AUTO_USER_SCOPE_TABLES and not is_admin:
+        if eq_col == 'user_id' and str(eq_val) != str(user['id']):
+            return jsonify({'error': 'Can only update your own rows'}), 403
         requested_user_id = data.get('user_id')
         if requested_user_id and str(requested_user_id) != str(user['id']):
             return jsonify({'error': 'Can only update your own rows'}), 403
@@ -1114,12 +1350,22 @@ def update_table(table_name):
 
     try:
         quoted_table = _quote_identifier(table_name)
-        set_clauses = ', '.join(f"{_quote_column(table_name, k, 'update column')} = %s" for k in data.keys())
-        quoted_eq_col = _quote_column(table_name, eq_col, 'eq column')
+        update_names = [
+            _validate_column_for_operation(
+                table_name,
+                key,
+                'update',
+                is_admin=is_admin,
+                label='update column',
+            )
+            for key in data.keys()
+        ]
+        set_clauses = ', '.join(f"{_quote_identifier(k)} = %s" for k in update_names)
+        quoted_eq_col = _quote_column_for_operation(table_name, eq_col, 'read', label='eq column')
         values = list(data.values()) + [eq_val]
         scope_clause = ''
-        if table_name in AUTO_USER_SCOPE_TABLES and not _is_admin_user(user):
-            scope_clause = f" AND {_quote_column(table_name, 'user_id')} = %s"
+        if table_name in AUTO_USER_SCOPE_TABLES and not is_admin:
+            scope_clause = f" AND {_quote_column_for_operation(table_name, 'user_id', 'read')} = %s"
             values.append(user['id'])
         result = db.execute_returning(
             f"UPDATE {quoted_table} SET {set_clauses} WHERE {quoted_eq_col} = %s{scope_clause} RETURNING *",
@@ -1136,24 +1382,18 @@ def update_table(table_name):
 @require_auth
 def delete_table(table_name):
     user = request.current_user
+    is_admin = _is_admin_user(user)
     eq_col = request.args.get('eq')
     eq_val = request.args.get('eqValue')
 
-    allowed_tables_delete = {
-        'content_dismissals', 'site_announcements', 'site_trust_snippets',
-        'site_content_blocks', 'broadcast_messages', 'promo_codes',
-        'answer_example_candidates', 'partner_connections',
-        'partner_progress', 'partner_settings', 'user_notifications',
-    }
-
-    if table_name not in allowed_tables_delete:
+    if table_name not in GENERIC_TABLE_DELETE_TABLES:
         return jsonify({'error': f'Cannot delete from {table_name}'}), 403
 
-    admin_only_delete_tables = {
+    admin_only_delete_tables = GENERIC_TABLE_ADMIN_WRITE_TABLES | {
         'site_announcements', 'site_trust_snippets', 'site_content_blocks',
         'broadcast_messages', 'promo_codes', 'answer_example_candidates',
     }
-    if table_name in admin_only_delete_tables and not _is_admin_user(user):
+    if table_name in admin_only_delete_tables and not is_admin:
         return jsonify({'error': 'Admin access required'}), 403
 
     if not eq_col or not eq_val:
@@ -1161,11 +1401,11 @@ def delete_table(table_name):
 
     try:
         quoted_table = _quote_identifier(table_name)
-        quoted_eq_col = _quote_column(table_name, eq_col, 'eq column')
+        quoted_eq_col = _quote_column_for_operation(table_name, eq_col, 'read', label='eq column')
         params = [eq_val]
         scope_clause = ''
-        if table_name in AUTO_USER_SCOPE_TABLES and not _is_admin_user(user):
-            scope_clause = f" AND {_quote_column(table_name, 'user_id')} = %s"
+        if table_name in AUTO_USER_SCOPE_TABLES and not is_admin:
+            scope_clause = f" AND {_quote_column_for_operation(table_name, 'user_id', 'read')} = %s"
             params.append(user['id'])
         db.execute(f"DELETE FROM {quoted_table} WHERE {quoted_eq_col} = %s{scope_clause}", params)
         return jsonify({'data': None})
@@ -1184,7 +1424,11 @@ def admin_system_status():
     stripe_publishable = os.getenv('STRIPE_PUBLISHABLE_KEY', '') or os.getenv('VITE_STRIPE_PUBLISHABLE_KEY', '')
     stripe_webhook = os.getenv('STRIPE_WEBHOOK_SECRET', '')
     plunk_api_key = os.getenv('PLUNK_SECRET_KEY', '') or os.getenv('PLUNK_API_KEY', '')
-    email_from = os.getenv('PLUNK_FROM_EMAIL') or os.getenv('EMAIL_FROM') or ''
+    resend_api_key = os.getenv('RESEND_API_KEY', '') or os.getenv('RESEND_SECRET_KEY', '')
+    email_provider = (os.getenv('EMAIL_PROVIDER') or '').strip().lower()
+    if email_provider not in {'resend', 'plunk'}:
+        email_provider = 'resend' if resend_api_key else ('plunk' if plunk_api_key else 'dev')
+    email_from = os.getenv('RESEND_FROM_EMAIL') or os.getenv('PLUNK_FROM_EMAIL') or os.getenv('EMAIL_FROM') or ''
 
     if stripe_secret.startswith('sk_test_'):
         stripe_mode = 'test'
@@ -1194,36 +1438,6 @@ def admin_system_status():
         stripe_mode = 'unknown'
     else:
         stripe_mode = 'not_configured'
-
-    price_status = {
-        'monthly': {
-            'planType': 'monthly',
-            'label': 'Premium Monthly',
-            'configured': bool(os.getenv('STRIPE_PRICE_ID_MONTHLY')),
-            'envVar': 'STRIPE_PRICE_ID_MONTHLY',
-            'expectedAmount': 1999,
-            'currency': 'usd',
-            'mode': 'subscription',
-        },
-        'lifetime': {
-            'planType': 'lifetime',
-            'label': 'Lifetime Access',
-            'configured': bool(os.getenv('STRIPE_PRICE_ID_LIFETIME')),
-            'envVar': 'STRIPE_PRICE_ID_LIFETIME',
-            'expectedAmount': 7999,
-            'currency': 'usd',
-            'mode': 'payment',
-        },
-        'interviewPass': {
-            'planType': 'interviewPass',
-            'label': '90-Day Interview Pass',
-            'configured': bool(os.getenv('STRIPE_PRICE_ID_INTERVIEW_PASS')),
-            'envVar': 'STRIPE_PRICE_ID_INTERVIEW_PASS',
-            'expectedAmount': 3999,
-            'currency': 'usd',
-            'mode': 'payment',
-        },
-    }
 
     def ai_env_value(*names):
         for name in names:
@@ -1264,7 +1478,7 @@ def admin_system_status():
         if not isinstance(entries, list):
             return statuses
 
-        reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified'}
+        reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified', 'minimax'}
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -1309,6 +1523,7 @@ def admin_system_status():
         'AI_DEFAULT_MODEL',
     ) or 'auto'
 
+    minimax = _openai_compatible_provider('minimax') or {}
     providers = [
         {
             'provider': 'unified',
@@ -1324,6 +1539,21 @@ def admin_system_status():
             'defaultModelEnvVar': 'UNIFIED_LLM_DEFAULT_MODEL',
             'openAICompatible': True,
             'configurationHint': 'Use this for OpenAI-compatible gateways, routers, and self-hosted LLM proxies.',
+        },
+        {
+            'provider': 'minimax',
+            'label': 'MiniMax',
+            'configured': bool(minimax.get('api_key') and minimax.get('base_url')),
+            'defaultModel': minimax.get('default_model') or os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3'),
+            'modelCount': len(MINIMAX_MODEL_CATALOG),
+            'apiKeyConfigured': bool(minimax.get('api_key')),
+            'baseUrlConfigured': bool(minimax.get('base_url')),
+            'baseUrl': minimax.get('base_url') or os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1'),
+            'apiKeyEnvVar': 'MINIMAX_API_KEY',
+            'baseUrlEnvVar': 'MINIMAX_BASE_URL',
+            'defaultModelEnvVar': 'MINIMAX_DEFAULT_MODEL',
+            'openAICompatible': True,
+            'configurationHint': 'MiniMax OpenAI-compatible chat completions. Default local model: MiniMax-M3.',
         },
         {
             'provider': 'openai',
@@ -1363,7 +1593,7 @@ def admin_system_status():
     saved_ai = saved_ai_runtime_config()
     saved_providers = saved_ai.get('providers') if isinstance(saved_ai.get('providers'), dict) else {}
     existing_provider_ids = {provider.get('provider') for provider in providers}
-    reserved_provider_ids = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified'}
+    reserved_provider_ids = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified', 'minimax'}
     for provider_id, saved_provider in (saved_providers.items() if isinstance(saved_providers, dict) else []):
         provider_key = normalize_provider_id(provider_id)
         if not provider_key or provider_key in existing_provider_ids or provider_key in reserved_provider_ids:
@@ -1408,7 +1638,8 @@ def admin_system_status():
 
     default_provider = saved_ai.get('defaultProvider') or saved_ai.get('default_provider') or os.getenv('AI_DEFAULT_PROVIDER')
     if not default_provider:
-        default_provider = 'unified' if unified_key and unified_base_url else ('nvidia' if os.getenv('NVIDIA_API_KEY') else 'openai')
+        configured_provider = next((p for p in providers if p.get('configured')), None)
+        default_provider = configured_provider.get('provider') if configured_provider else 'openai'
     default_model = saved_ai.get('defaultModel') or saved_ai.get('default_model') or os.getenv('AI_DEFAULT_MODEL')
     if not default_model:
         provider_match = next((p for p in providers if p.get('provider') == default_provider), None)
@@ -1417,13 +1648,7 @@ def admin_system_status():
             else os.getenv('NVIDIA_DEFAULT_MODEL', 'meta/llama-3.1-8b-instruct')
         )
 
-    auto_create_test_prices = (
-        stripe_mode == 'test'
-        and os.getenv('STRIPE_AUTO_CREATE_TEST_PRICES', 'true').lower() in ('1', 'true', 'yes')
-    )
-    checkout_ready = bool(stripe_secret) and (
-        all(price['configured'] for price in price_status.values()) or auto_create_test_prices
-    )
+    robin_checkout_ready = bool(stripe_secret)
 
     return jsonify({
         'serverTime': datetime.now(timezone.utc).isoformat(),
@@ -1440,20 +1665,26 @@ def admin_system_status():
             'secretKeyConfigured': bool(stripe_secret),
             'publishableKeyConfigured': bool(stripe_publishable),
             'webhookConfigured': bool(stripe_webhook),
-            'autoCreateTestPrices': auto_create_test_prices,
-            'checkoutReady': checkout_ready,
+            'robinCreditCheckoutReady': robin_checkout_ready,
+            'checkoutReady': robin_checkout_ready,
             'webhookReady': bool(stripe_secret and stripe_webhook),
-            'prices': price_status,
+            'retiredPaidPlanCheckout': True,
         },
         'database': {
             'urlConfigured': bool(os.getenv('DATABASE_URL')),
         },
         'email': {
-            'provider': 'plunk' if plunk_api_key else 'dev',
+            'provider': email_provider,
+            'configured': bool(resend_api_key or plunk_api_key),
+            'resendConfigured': bool(resend_api_key),
             'plunkConfigured': bool(plunk_api_key),
             'fromConfigured': bool(email_from),
             'fromAddress': email_from,
-            'apiUrl': os.getenv('PLUNK_API_URL', 'https://next-api.useplunk.com/v1/send'),
+            'apiUrl': (
+                os.getenv('RESEND_API_URL', 'https://api.resend.com/emails')
+                if email_provider == 'resend'
+                else os.getenv('PLUNK_API_URL', 'https://next-api.useplunk.com/v1/send')
+            ),
         },
     })
 
@@ -1494,7 +1725,7 @@ def admin_ai_settings_endpoint():
             'defaultModel': str(provider_config.get('defaultModel') or provider_config.get('default_model') or '').strip(),
             'label': str(provider_config.get('label') or previous.get('label') or provider_key.replace('_', ' ').title()).strip()[:120],
             'openAICompatible': bool(openai_compatible),
-            'custom': bool(provider_config.get('custom') or previous.get('custom') or provider_key not in {'openai', 'anthropic', 'deepseek', 'nvidia', 'unified'}),
+            'custom': bool(provider_config.get('custom') or previous.get('custom') or provider_key not in {'openai', 'anthropic', 'deepseek', 'nvidia', 'unified', 'minimax'}),
         }
         base_url = str(provider_config.get('baseUrl') or provider_config.get('base_url') or '').strip()
         if base_url:
@@ -1564,6 +1795,12 @@ def _provider_model_endpoint(provider_id, incoming):
         return 'https://integrate.api.nvidia.com/v1', api_key or os.getenv('NVIDIA_API_KEY', ''), default_model
     if provider_id == 'anthropic':
         return '', api_key or os.getenv('ANTHROPIC_API_KEY', ''), default_model
+    if provider_id == 'minimax':
+        return (
+            base_url or os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1'),
+            api_key or os.getenv('MINIMAX_API_KEY', ''),
+            default_model or os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3'),
+        )
     return base_url, api_key, default_model
 
 
@@ -1579,6 +1816,16 @@ def _normalize_model_list(payload, default_model=''):
     if default_model and default_model not in models:
         models.insert(0, default_model)
     return models[:200]
+
+
+MINIMAX_MODEL_CATALOG = [
+    'MiniMax-M3',
+    'MiniMax-M2.7',
+    'MiniMax-M2.7-highspeed',
+    'MiniMax-M2.5',
+    'MiniMax-M2.5-highspeed',
+    'MiniMax-M2.1',
+]
 
 
 @api_bp.route('/admin/ai-provider-models', methods=['POST'])
@@ -1599,6 +1846,10 @@ def admin_ai_provider_models_endpoint():
             'claude-3-5-sonnet-latest',
             'claude-3-opus-latest',
         ])
+        return jsonify({'success': True, 'provider': provider_id, 'models': models})
+
+    if provider_id == 'minimax':
+        models = _sanitize_string_list([default_model, *MINIMAX_MODEL_CATALOG])
         return jsonify({'success': True, 'provider': provider_id, 'models': models})
 
     if not base_url or not api_key:
@@ -2206,6 +2457,7 @@ def admin_users():
                 'totalUsers': totals.get('total_users', 0),
                 'paidUsers': totals.get('paid_users', 0),
                 'trialUsers': totals.get('trial_users', 0),
+                'freeUsers': totals.get('total_users', 0),
                 'usersWithOpenTickets': totals.get('users_with_open_tickets', 0),
                 'robinActiveToday': totals.get('robin_active_today', 0),
                 'usersWithUnreadMessages': totals.get('users_with_unread_messages', 0),
@@ -2553,17 +2805,20 @@ def current_user_robin_credits():
 
 @api_bp.route('/robin/credit-packs', methods=['GET'])
 def public_robin_credit_packs():
-    checkout_enabled = bool(os.getenv('STRIPE_SECRET_KEY', '').strip())
+    settings = saved_robin_usage_config()
+    packs_feature_enabled = bool(settings.get('paidCreditPacksEnabled', False))
+    checkout_enabled = bool(os.getenv('STRIPE_SECRET_KEY', '').strip()) and packs_feature_enabled
     if not checkout_enabled:
         return jsonify({
             'success': True,
             'checkoutEnabled': False,
-            'dailyFreeMessages': None,
-            'paidMessagesRollover': True,
+            'dailyFreeMessages': settings.get('dailyFreeMessages'),
+            'paidMessagesRollover': bool(settings.get('paidMessagesRollover', True)),
+            'packsAvailable': False,
+            'message': settings.get('creditPacksUnavailableMessage'),
             'packs': [],
         })
 
-    settings = saved_robin_usage_config()
     packs = []
     for pack in settings.get('paidPacks') or []:
         try:
@@ -2588,6 +2843,8 @@ def public_robin_credit_packs():
         'checkoutEnabled': checkout_enabled,
         'dailyFreeMessages': settings.get('dailyFreeMessages'),
         'paidMessagesRollover': bool(settings.get('paidMessagesRollover', True)),
+        'packsAvailable': bool(packs),
+        'message': settings.get('creditPacksUnavailableMessage') if not packs else None,
         'packs': packs,
     })
 
@@ -3268,17 +3525,28 @@ def _broadcast_recipients(audience_type):
     return db.query_all(
         """
         SELECT u.id::text AS user_id, u.email,
-               COALESCE(s.plan_type, 'trial') AS plan_type,
-               COALESCE(s.status, 'trialing') AS subscription_status
+               COALESCE(ai.total_turns_today, 0) AS robin_turns_today,
+               COALESCE(ns.unread_messages, 0) AS unread_messages
         FROM users u
-        LEFT JOIN user_subscriptions s ON s.user_id = u.id
+        LEFT JOIN (
+            SELECT user_id, SUM(total_turns) AS total_turns_today
+            FROM ai_daily_usage
+            WHERE usage_date = CURRENT_DATE
+            GROUP BY user_id
+        ) ai ON ai.user_id = u.id
+        LEFT JOIN (
+            SELECT user_id, COUNT(*) AS unread_messages
+            FROM user_notifications
+            WHERE is_read = false
+            GROUP BY user_id
+        ) ns ON ns.user_id = u.id
         WHERE COALESCE(u.email, '') <> ''
           AND CASE %s
             WHEN 'all_users' THEN true
-            WHEN 'trial_users' THEN s.user_id IS NULL OR COALESCE(s.plan_type, 'trial') = 'trial' OR COALESCE(s.status, 'trialing') = 'trialing'
-            WHEN 'premium_users' THEN COALESCE(s.plan_type, 'trial') IN ('monthly', 'lifetime', 'interviewPass') AND COALESCE(s.status, 'active') IN ('active', 'canceled', 'grace_period')
-            WHEN 'expired_users' THEN COALESCE(s.status, '') IN ('expired', 'canceled', 'past_due') OR (s.current_period_ends_at < now() AND COALESCE(s.status, '') <> 'active')
-            WHEN 'free_users' THEN s.user_id IS NULL OR COALESCE(s.plan_type, 'trial') = 'trial'
+            WHEN 'free_users' THEN true
+            WHEN 'robin_users' THEN COALESCE(ai.total_turns_today, 0) > 0
+            WHEN 'unread_message_users' THEN COALESCE(ns.unread_messages, 0) > 0
+            WHEN 'reengagement_users' THEN COALESCE(u.updated_at, u.created_at) < now() - INTERVAL '7 days'
             ELSE true
           END
         LIMIT 2000
@@ -3387,7 +3655,13 @@ def admin_broadcasts_endpoint():
     title = (data.get('title') or '').strip()[:200]
     message = (data.get('message') or '').strip()[:10000]
     audience_type = (data.get('audienceType') or data.get('audience_type') or 'all_users').strip()
-    if audience_type not in {'all_users', 'trial_users', 'premium_users', 'expired_users', 'free_users'}:
+    legacy_audience_map = {
+        'trial_users': 'free_users',
+        'premium_users': 'robin_users',
+        'expired_users': 'reengagement_users',
+    }
+    audience_type = legacy_audience_map.get(audience_type, audience_type)
+    if audience_type not in {'all_users', 'free_users', 'robin_users', 'unread_message_users', 'reengagement_users'}:
         audience_type = 'all_users'
     scheduled_at = data.get('scheduledAt') or data.get('scheduled_at') or None
     send_email = bool(data.get('sendEmail', data.get('send_email', True)))
@@ -3514,365 +3788,22 @@ def record_notification_event_endpoint(notification_id):
 @api_bp.route('/support/tickets', methods=['POST'])
 def create_support_ticket_endpoint():
     return _free_app_workflow_retired_response('support ticket')
-    user = request.current_user
-    data = request.get_json() or {}
-    subject = (data.get('subject') or '').strip()[:200]
-    category = normalize_ticket_category((data.get('category') or 'other').strip())
-    message = (data.get('message') or '').strip()[:6000]
-    ai_summary = (data.get('aiSummary') or data.get('ai_summary') or None)
-    ai_suggested_reply = (data.get('aiSuggestedReply') or data.get('ai_suggested_reply') or None)
-    ai_triage = parse_jsonish(data.get('aiTriage') or data.get('ai_triage'), {})
-
-    if not subject or not message:
-        return jsonify({'error': 'Subject and message are required'}), 400
-
-    context = get_user_support_context(user['id'])
-    conversation = ai_triage.get('supportConversation')
-    if not isinstance(conversation, list):
-        conversation = []
-    if not conversation:
-        conversation.append(_support_conversation_item('user', message, 'user', {'initial': True}))
-
-    ai_response = None
-    if not ai_suggested_reply:
-        ai_response = _run_support_ai(category, subject, message, context, conversation)
-        ai_summary = ai_response.get('summary') or ai_summary
-        ai_suggested_reply = ai_response.get('reply') or ai_suggested_reply
-        if category == 'other' and ai_response.get('recommendedCategory'):
-            category = normalize_ticket_category(ai_response.get('recommendedCategory'))
-        if not subject and ai_response.get('suggestedTicketSubject'):
-            subject = ai_response.get('suggestedTicketSubject')
-    else:
-        ai_response = {
-            'reply': ai_suggested_reply,
-            'summary': ai_summary,
-            'urgency': ai_triage.get('urgency') or 'normal',
-            'recommendedCategory': ai_triage.get('recommendedCategory') or category,
-            'provider': ai_triage.get('provider'),
-            'model': ai_triage.get('model'),
-            'fallback': ai_triage.get('fallback', False),
-            'canResolve': ai_triage.get('canResolve', True),
-            'needsAdminReview': ai_triage.get('needsAdminReview', False),
-            'shouldCreateTicket': ai_triage.get('shouldCreateTicket', True),
-        }
-
-    if ai_suggested_reply and not any(item.get('role') == 'assistant' for item in conversation if isinstance(item, dict)):
-        conversation.append(_support_conversation_item(
-            'assistant',
-            ai_suggested_reply,
-            'support_ai',
-            {
-                'urgency': ai_response.get('urgency'),
-                'provider': ai_response.get('provider'),
-                'model': ai_response.get('model'),
-                'fallback': bool(ai_response.get('fallback', False)),
-            },
-        ))
-
-    refund_signal = has_refund_signal(category, subject, message, ai_triage)
-    cancel_signal = has_cancel_signal(category, subject, message, ai_triage)
-    needs_admin_review = _support_needs_admin(ai_response, category, refund_signal, cancel_signal)
-    ai_triage.update({
-        'refundSignal': refund_signal,
-        'cancelSignal': cancel_signal,
-        'urgency': ai_response.get('urgency') or ai_triage.get('urgency') or 'normal',
-        'recommendedCategory': ai_response.get('recommendedCategory') or category,
-        'canResolve': _support_bool(ai_response.get('canResolve'), True),
-        'needsAdminReview': needs_admin_review,
-        'adminUrgent': needs_admin_review,
-        'shouldCreateTicket': _support_bool(ai_response.get('shouldCreateTicket'), True),
-        'escalationReason': ai_response.get('escalationReason') or (
-            'AI marked this ticket for admin review.'
-            if needs_admin_review else ''
-        ),
-        'supportConversation': conversation,
-        'refundEligibilityStatus': (context.get('refundEligibility') or {}).get('status'),
-        'retentionOfferEligible': bool((context.get('retentionOffer') or {}).get('eligible')),
-    })
-
-    try:
-        ticket_id = db.call_function('create_support_ticket', (
-            user['id'],
-            subject,
-            category,
-            message,
-            ai_summary,
-            ai_suggested_reply,
-            json_dumps(ai_triage),
-        ))
-        ticket = _support_ticket_with_user(ticket_id)
-        if not ticket:
-            return jsonify({'error': 'Ticket was created but could not be loaded'}), 500
-
-        notify_count = notify_admins(
-            'Urgent Support Ticket' if needs_admin_review else ('Refund Review Ticket' if refund_signal else 'New Support Ticket'),
-            f'{user["email"]}: {subject}',
-            {
-                'ticket_id': str(ticket_id),
-                'user_id': user['id'],
-                'category': category,
-                'refund_signal': refund_signal,
-                'cancel_signal': cancel_signal,
-                'admin_urgent': needs_admin_review,
-                'urgency': ai_triage.get('urgency'),
-                'ai_can_resolve': ai_triage.get('canResolve'),
-                'escalation_reason': ai_triage.get('escalationReason'),
-                'refund_eligibility': context.get('refundEligibility'),
-                'retention_offer': context.get('retentionOffer'),
-            },
-            'refund' if refund_signal else 'support',
-        )
-        normalized = normalize_ticket_row(ticket, context)
-        email_count = _send_support_admin_emails(normalized, context, refund_signal)
-
-        return jsonify({
-            'success': True,
-            'ticket': normalized,
-            'adminNotificationsCreated': notify_count,
-            'adminEmailsSent': email_count,
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @api_bp.route('/support/tickets/<ticket_id>/reply', methods=['POST'])
 def user_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('support ticket reply')
-    user = request.current_user
-    data = request.get_json() or {}
-    message = (data.get('message') or '').strip()[:4000]
-    if not message:
-        return jsonify({'error': 'Reply message is required'}), 400
-
-    ticket = _support_ticket_with_user(ticket_id)
-    if not ticket or str(ticket.get('user_id')) != str(user['id']):
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    context = get_user_support_context(user['id'])
-    category = normalize_ticket_category(ticket.get('category') or 'other')
-    subject = ticket.get('subject') or 'Support request'
-    ai_triage = parse_jsonish(ticket.get('ai_triage'), {})
-    conversation = ai_triage.get('supportConversation')
-    if not isinstance(conversation, list):
-        conversation = [
-            _support_conversation_item('user', ticket.get('message') or '', 'user', {'initial': True})
-        ]
-        if ticket.get('ai_suggested_reply'):
-            conversation.append(_support_conversation_item(
-                'assistant',
-                ticket.get('ai_suggested_reply'),
-                'support_ai',
-                {'restored': True},
-            ))
-
-    conversation.append(_support_conversation_item('user', message, 'user'))
-    ai_response = _run_support_ai(category, subject, message, context, conversation)
-    ai_reply = ai_response.get('reply') or 'Thanks. I sent this to support for review.'
-    conversation.append(_support_conversation_item(
-        'assistant',
-        ai_reply,
-        'support_ai',
-        {
-            'urgency': ai_response.get('urgency'),
-            'provider': ai_response.get('provider'),
-            'model': ai_response.get('model'),
-            'fallback': bool(ai_response.get('fallback', False)),
-        },
-    ))
-
-    refund_signal = has_refund_signal(category, subject, message, ai_triage)
-    cancel_signal = has_cancel_signal(category, subject, message, ai_triage)
-    needs_admin_review = _support_needs_admin(ai_response, category, refund_signal, cancel_signal)
-    ai_triage.update({
-        'refundSignal': bool(ai_triage.get('refundSignal') or refund_signal),
-        'cancelSignal': bool(ai_triage.get('cancelSignal') or cancel_signal),
-        'urgency': ai_response.get('urgency') or ai_triage.get('urgency') or 'normal',
-        'recommendedCategory': ai_response.get('recommendedCategory') or category,
-        'canResolve': _support_bool(ai_response.get('canResolve'), True),
-        'needsAdminReview': bool(ai_triage.get('needsAdminReview') or needs_admin_review),
-        'adminUrgent': bool(ai_triage.get('adminUrgent') or needs_admin_review),
-        'shouldCreateTicket': _support_bool(ai_response.get('shouldCreateTicket'), True),
-        'escalationReason': ai_response.get('escalationReason') or ai_triage.get('escalationReason') or '',
-        'supportConversation': conversation,
-    })
-
-    try:
-        refreshed = db.execute_returning(
-            """
-            UPDATE support_tickets
-            SET ai_summary = COALESCE(%s, ai_summary),
-                ai_suggested_reply = %s,
-                ai_triage = %s::jsonb,
-                last_ai_assisted_at = now(),
-                status = CASE WHEN status = 'closed' THEN 'open' ELSE status END,
-                closed_at = CASE WHEN status = 'closed' THEN NULL ELSE closed_at END,
-                updated_at = now()
-            WHERE id = %s AND user_id = %s
-            RETURNING *
-            """,
-            (
-                ai_response.get('summary'),
-                ai_reply,
-                json_dumps(ai_triage),
-                ticket_id,
-                user['id'],
-            ),
-        )
-        if not refreshed:
-            return jsonify({'error': 'Ticket could not be updated'}), 500
-
-        try:
-            db.call_function('create_user_notification', (
-                user['id'],
-                'support',
-                'AI Support Replied',
-                ai_reply[:900],
-                '/messages',
-                json_dumps({'ticket_id': ticket_id, 'support_ai_reply': True, 'rich_content': True}),
-            ))
-        except Exception:
-            pass
-
-        refreshed['user_email'] = ticket['user_email']
-        normalized = normalize_ticket_row(refreshed, context)
-        notify_count = 0
-        email_count = 0
-        if needs_admin_review:
-            notify_count = notify_admins(
-                'Urgent Support Follow-up',
-                f'{user["email"]}: {subject}',
-                {
-                    'ticket_id': ticket_id,
-                    'user_id': user['id'],
-                    'category': category,
-                    'admin_urgent': True,
-                    'urgency': ai_triage.get('urgency'),
-                    'escalation_reason': ai_triage.get('escalationReason'),
-                },
-                'refund' if refund_signal else 'support',
-            )
-            email_count = _send_support_admin_emails(normalized, context, refund_signal)
-
-        return jsonify({
-            'success': True,
-            'ticket': normalized,
-            'reply': ai_reply,
-            'adminNotificationsCreated': notify_count,
-            'adminEmailsSent': email_count,
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @api_bp.route('/admin/support/tickets', methods=['GET', 'POST'])
 def admin_support_tickets():
     return _free_app_workflow_retired_response('admin support ticket')
-    data = request.get_json(silent=True) or {}
-    status_filter = request.args.get('status') or data.get('status') or 'active'
-    limit = request.args.get('limit', data.get('limit', 100), type=int) if request.method == 'GET' else int(data.get('limit', 100) or 100)
-    limit = max(1, min(limit, 250))
-
-    conditions = []
-    params = []
-    if status_filter == 'active':
-        conditions.append("t.status IN ('open', 'replied')")
-    elif status_filter in ('open', 'replied', 'closed'):
-        conditions.append('t.status = %s')
-        params.append(status_filter)
-
-    where_sql = f"WHERE {' AND '.join(conditions)}" if conditions else ''
-    rows = db.query_all(
-        f"""
-        SELECT t.*, u.email AS user_email
-        FROM support_tickets t
-        JOIN users u ON u.id = t.user_id
-        {where_sql}
-        ORDER BY
-          CASE t.status WHEN 'open' THEN 0 WHEN 'replied' THEN 1 ELSE 2 END,
-          t.created_at DESC
-        LIMIT %s
-        """,
-        params + [limit],
-    )
-
-    tickets = []
-    for row in rows:
-        context = get_user_support_context(str(row['user_id']))
-        tickets.append(normalize_ticket_row(row, context))
-
-    return jsonify({
-        'tickets': tickets,
-        'counts': {
-            'open': sum(1 for ticket in tickets if ticket['status'] == 'open'),
-            'replied': sum(1 for ticket in tickets if ticket['status'] == 'replied'),
-            'closed': sum(1 for ticket in tickets if ticket['status'] == 'closed'),
-            'refundSignals': sum(1 for ticket in tickets if ticket.get('refundSignal')),
-        },
-    })
-
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/reply', methods=['POST'])
 def admin_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket reply')
-    user = request.current_user
-    data = request.get_json() or {}
-    reply = (data.get('reply') or '').strip()
-    if not reply:
-        return jsonify({'error': 'Reply is required'}), 400
-
-    ticket = _support_ticket_with_user(ticket_id)
-    if not ticket:
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    try:
-        updated = db.call_function('reply_to_support_ticket', (ticket_id, user['id'], reply))
-        if not updated:
-            return jsonify({'error': 'Ticket could not be updated'}), 500
-        refreshed = _support_ticket_with_user(ticket_id)
-        try:
-            send_support_reply_email(refreshed['user_email'], refreshed, reply)
-        except Exception:
-            pass
-        context = get_user_support_context(str(refreshed['user_id']))
-        return jsonify({'success': True, 'ticket': normalize_ticket_row(refreshed, context)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/close', methods=['POST'])
 def admin_close_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket close')
-    ticket = _support_ticket_with_user(ticket_id)
-    if not ticket:
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    try:
-        refreshed = db.execute_returning(
-            """
-            UPDATE support_tickets
-            SET status = 'closed', closed_at = now(), updated_at = now()
-            WHERE id = %s
-            RETURNING *
-            """,
-            (ticket_id,),
-        )
-        try:
-            db.call_function('create_user_notification', (
-                str(ticket['user_id']),
-                'support',
-                'Support Ticket Closed',
-                f'Your support ticket "{ticket["subject"]}" has been closed.',
-                None,
-                json_dumps({'ticket_id': ticket_id}),
-            ))
-        except Exception:
-            pass
-        refreshed['user_email'] = ticket['user_email']
-        context = get_user_support_context(str(refreshed['user_id']))
-        return jsonify({'success': True, 'ticket': normalize_ticket_row(refreshed, context)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 @api_bp.route('/admin/memory-status', methods=['GET'])
 @require_admin
@@ -3950,79 +3881,6 @@ def admin_memory_status():
 @api_bp.route('/process-refund', methods=['POST'])
 def process_refund():
     return _free_app_workflow_retired_response('refund processing')
-    import stripe
-    user = request.current_user
-    data = request.get_json()
-    refund_request_id = data.get('refundRequestId')
-    admin_notes = data.get('adminNotes')
-
-    if not refund_request_id:
-        return jsonify({'error': 'Refund request ID required'}), 400
-
-    refund_request = db.query_one("SELECT * FROM refund_requests WHERE id = %s", (refund_request_id,))
-    if not refund_request:
-        return jsonify({'error': 'Refund request not found'}), 404
-
-    if refund_request['eligibility_status'] == 'refunded':
-        return jsonify({'error': 'Already refunded'}), 400
-
-    if refund_request['eligibility_status'] not in ('eligible', 'approved'):
-        return jsonify({'error': 'Not eligible'}), 400
-
-    if not refund_request.get('stripe_payment_intent_id') and not refund_request.get('stripe_charge_id'):
-        return jsonify({'error': 'No refundable Stripe payment reference found'}), 400
-
-    stripe.api_key = os.getenv('STRIPE_SECRET_KEY', '')
-    if not stripe.api_key:
-        return jsonify({'error': 'Stripe secret key is not configured'}), 503
-
-    refund_params = {
-        'reason': 'requested_by_customer',
-        'metadata': {
-            'refund_request_id': str(refund_request_id),
-            'processed_by': str(user['id']),
-            'customer_reason': refund_request.get('reason') or '',
-        },
-    }
-    if refund_request.get('stripe_payment_intent_id'):
-        refund_params['payment_intent'] = refund_request['stripe_payment_intent_id']
-    else:
-        refund_params['charge'] = refund_request['stripe_charge_id']
-
-    try:
-        stripe_refund = stripe.Refund.create(
-            **refund_params,
-            idempotency_key=f"refund_request_{refund_request_id}",
-        )
-    except stripe.error.StripeError as e:
-        db.execute(
-            """UPDATE refund_requests SET eligibility_status = 'denied',
-               admin_notes = %s, processed_by = %s, processed_at = now(), updated_at = now()
-               WHERE id = %s""",
-            (f"Stripe error: {str(e)}\n{admin_notes or ''}", user['id'], refund_request_id)
-        )
-        return jsonify({'error': f'Stripe refund failed: {str(e)}'}), 502
-
-    db.execute(
-        """UPDATE refund_requests SET eligibility_status = 'refunded',
-           stripe_refund_id = %s, refunded_at = now(),
-           processed_by = %s, processed_at = now(),
-           admin_notes = %s, updated_at = now()
-           WHERE id = %s""",
-        (stripe_refund.id, user['id'], admin_notes, refund_request_id)
-    )
-
-    try:
-        db.call_function('create_user_notification', (
-            refund_request['user_id'], 'refund', 'Refund Processed',
-            f"Your refund of ${refund_request['amount']} has been processed.",
-            None, json.dumps({'refund_id': str(refund_request_id), 'amount': float(refund_request['amount'])})
-        ))
-    except Exception:
-        pass
-
-    return jsonify({'success': True, 'refundId': stripe_refund.id, 'message': 'Refund processed successfully'})
-
 
 @api_bp.route('/trigger-rebuild', methods=['POST'])
 @require_admin

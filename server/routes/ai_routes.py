@@ -21,6 +21,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
 NVIDIA_API_KEY = os.getenv('NVIDIA_API_KEY', '')
+MINIMAX_API_KEY = os.getenv('MINIMAX_API_KEY', '')
+MINIMAX_BASE_URL = os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1')
+MINIMAX_DEFAULT_MODEL = os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3')
 
 VALID_FEEDBACK_LABELS = {
     'clear_and_natural',
@@ -280,12 +283,12 @@ def ai_interview_turn():
             },
         }), 500
 
-    _record_turn(user, session_id)
+    post_turn_limits = _record_turn_and_refresh_limits(user, session_id, limits)
 
     normalized = _normalize_ai_response(response_text, actual_provider, actual_model, data)
     normalized['sessionId'] = str(session_id or data.get('anonymousId') or uuid.uuid4())
-    normalized['turnsRemaining'] = _turns_remaining(limits)
-    normalized['planType'] = limits.get('plan_type') if isinstance(limits, dict) else ('trial' if not user else None)
+    normalized['turnsRemaining'] = _turns_remaining(post_turn_limits)
+    normalized['planType'] = post_turn_limits.get('plan_type') if isinstance(post_turn_limits, dict) else ('trial' if not user else None)
     normalized['requestedProvider'] = provider
     normalized['requestedModel'] = model
     normalized['providerFallback'] = fallback_used
@@ -470,7 +473,7 @@ def dashboard_agent():
                 'tokenEstimate': token_estimate,
             },
         )
-        _record_turn(user, session_id)
+        post_turn_limits = _record_turn_and_refresh_limits(user, session_id, limits)
         return jsonify({
             'success': True,
             'data': {
@@ -479,8 +482,8 @@ def dashboard_agent():
                 'requestedModel': model,
                 'providerFallback': False,
                 'providerErrors': [],
-                'turnsRemaining': _turns_remaining(limits),
-                'planType': limits.get('plan_type') if isinstance(limits, dict) else None,
+                'turnsRemaining': _turns_remaining(post_turn_limits),
+                'planType': post_turn_limits.get('plan_type') if isinstance(post_turn_limits, dict) else None,
                 'tokenEstimate': token_estimate,
             },
         })
@@ -526,7 +529,7 @@ def dashboard_agent():
             'tokenEstimate': token_estimate,
         },
     )
-    _record_turn(user, session_id)
+    post_turn_limits = _record_turn_and_refresh_limits(user, session_id, limits)
 
     return jsonify({
         'success': True,
@@ -536,8 +539,8 @@ def dashboard_agent():
             'requestedModel': model,
             'providerFallback': fallback_used,
             'providerErrors': provider_errors[-2:],
-            'turnsRemaining': _turns_remaining(limits),
-            'planType': limits.get('plan_type') if isinstance(limits, dict) else None,
+            'turnsRemaining': _turns_remaining(post_turn_limits),
+            'planType': post_turn_limits.get('plan_type') if isinstance(post_turn_limits, dict) else None,
             'tokenEstimate': token_estimate,
         },
     })
@@ -586,6 +589,11 @@ def _saved_provider_config(provider):
     return provider_config if isinstance(provider_config, dict) else {}
 
 
+def _saved_provider_enabled(provider):
+    config = _saved_provider_config(provider)
+    return config.get('enabled', True) is not False
+
+
 def _saved_provider_value(provider, key, fallback=''):
     value = _saved_provider_config(provider).get(key)
     if isinstance(value, str) and value.strip():
@@ -594,14 +602,14 @@ def _saved_provider_value(provider, key, fallback=''):
 
 
 def _openai_compatible_provider_ids():
-    provider_ids = ['unified']
+    provider_ids = ['unified', 'minimax']
     for provider in _custom_openai_compatible_providers():
         provider_id = provider.get('provider')
         if provider_id and provider_id not in provider_ids:
             provider_ids.append(provider_id)
     config = saved_ai_runtime_config()
     providers = config.get('providers') if isinstance(config.get('providers'), dict) else {}
-    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback'}
+    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'minimax'}
     for provider_id, provider_config in providers.items():
         provider_key = _normalize_provider_id(provider_id)
         if not provider_key or provider_key in reserved or provider_key in provider_ids:
@@ -613,6 +621,9 @@ def _openai_compatible_provider_ids():
 
 def _openai_compatible_provider(provider):
     provider_id = _normalize_provider_id(provider)
+    if not _saved_provider_enabled(provider_id):
+        return None
+
     if provider_id == 'unified':
         saved = _saved_provider_config('unified')
         return {
@@ -628,11 +639,21 @@ def _openai_compatible_provider(provider):
             ) or 'auto',
         }
 
+    if provider_id == 'minimax':
+        saved = _saved_provider_config('minimax')
+        return {
+            'provider': 'minimax',
+            'label': 'MiniMax',
+            'base_url': saved.get('baseUrl') or saved.get('base_url') or _env_value('MINIMAX_BASE_URL') or MINIMAX_BASE_URL,
+            'api_key': saved.get('apiKey') or saved.get('api_key') or _env_value('MINIMAX_API_KEY') or MINIMAX_API_KEY,
+            'default_model': saved.get('defaultModel') or saved.get('default_model') or _env_value('MINIMAX_DEFAULT_MODEL') or MINIMAX_DEFAULT_MODEL,
+        }
+
     for custom_provider in _custom_openai_compatible_providers():
         if custom_provider.get('provider') == provider_id:
             return custom_provider
 
-    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback'}
+    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'minimax'}
     saved = _saved_provider_config(provider_id)
     if provider_id not in reserved and saved and saved.get('openAICompatible', True):
         return {
@@ -664,7 +685,7 @@ def _custom_openai_compatible_providers():
         return []
 
     providers = []
-    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified'}
+    reserved = {'openai', 'anthropic', 'deepseek', 'nvidia', 'fallback', 'unified', 'minimax'}
     for entry in entries:
         if not isinstance(entry, dict):
             continue
@@ -1206,6 +1227,9 @@ def _serialize_dashboard_memory(row, question=None, answer=None, provider=None, 
 
 
 def _provider_configured(provider):
+    if not _saved_provider_enabled(provider):
+        return False
+
     custom_provider = _openai_compatible_provider(provider)
     if custom_provider:
         return bool(custom_provider.get('api_key') and custom_provider.get('base_url'))
@@ -1230,7 +1254,7 @@ def _provider_priority(preferred_provider):
     else:
         configured_order = [
             item.strip()
-            for item in os.getenv('AI_FALLBACK_PROVIDERS', 'unified,nvidia,deepseek,anthropic,openai').split(',')
+            for item in os.getenv('AI_FALLBACK_PROVIDERS', 'minimax,unified,nvidia,deepseek,anthropic,openai').split(',')
             if item.strip()
         ]
     for provider in _openai_compatible_provider_ids():
@@ -1345,6 +1369,11 @@ def _check_usage_limits(user):
                     'turns_remaining': 0,
                     'total_messages_remaining': 0,
                 })
+            else:
+                limits.update({
+                    'allowed': True,
+                    'reason': None,
+                })
 
             return limits
     except Exception:
@@ -1387,6 +1416,14 @@ def _record_turn(user, session_id):
             )
     except Exception:
         pass
+
+
+def _record_turn_and_refresh_limits(user, session_id, fallback_limits=None):
+    _record_turn(user, session_id)
+    if not user:
+        return fallback_limits or {'allowed': True, 'plan_type': 'trial'}
+    refreshed = _check_usage_limits(user)
+    return refreshed if isinstance(refreshed, dict) else (fallback_limits or {'allowed': True})
 
 
 def _turns_remaining(limits):
