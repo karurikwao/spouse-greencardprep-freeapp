@@ -266,6 +266,31 @@ def _robin_scope_redirect_answer(question):
     )
 
 
+def _robin_common_practice_answer(question):
+    text = str(question or '').lower()
+    not_know_signal = any(phrase in text for phrase in (
+        "don't know", "do not know", "dont know", "not know", "can't answer",
+        "cannot answer", "don't remember", "do not remember", "forgot",
+    ))
+    interview_signal = any(word in text for word in ('interview', 'uscis', 'green card', 'officer', 'question', 'answer'))
+    if not (not_know_signal and interview_signal):
+        return ''
+
+    return (
+        "<p>It is okay if you do not know an answer in the interview. Do not guess or make something up. "
+        "A calm, honest answer is usually better.</p>"
+        "<p>You can say something like: <strong>\"I am not sure, but I can explain what I remember\"</strong> "
+        "or <strong>\"I do not remember the exact date, but it was around...\"</strong>. If your spouse knows the "
+        "answer, let them answer naturally instead of trying to force it.</p>"
+        "<ul>"
+        "<li><strong>Stay honest:</strong> give the facts you remember.</li>"
+        "<li><strong>Stay calm:</strong> one unsure answer does not automatically mean you failed.</li>"
+        "<li><strong>Practice together:</strong> review dates, addresses, family details, trips, and daily routines before the interview.</li>"
+        "</ul>"
+        "<p>Quick practice: pick one question you feel unsure about and write a simple truthful answer in your own words.</p>"
+    )
+
+
 def _lawyer_directory_config():
     raw = get_admin_setting('lawyer_directory_config', {}) or {}
     return raw if isinstance(raw, dict) else {}
@@ -514,6 +539,43 @@ def dashboard_agent():
             'success': True,
             'data': {
                 **_serialize_dashboard_memory(saved, question, scoped_answer, 'routing_guard', 'robin_scope_guard', tags),
+                'requestedProvider': provider,
+                'requestedModel': model,
+                'providerFallback': False,
+                'providerErrors': [],
+                'turnsRemaining': _turns_remaining(post_turn_limits),
+                'planType': post_turn_limits.get('plan_type') if isinstance(post_turn_limits, dict) else None,
+                'tokenEstimate': token_estimate,
+            },
+        })
+
+    common_answer = _robin_common_practice_answer(question)
+    if common_answer:
+        session_id = _record_session_start(user, 'practice_guard', 'robin_common_practice', 'dashboard-agent')
+        tags = _extract_memory_tags(question, common_answer)
+        token_estimate = _estimate_token_count(question) + _estimate_token_count(common_answer)
+        saved = _record_dashboard_agent_memory(
+            user['id'],
+            question,
+            common_answer,
+            'practice_guard',
+            'robin_common_practice',
+            tags,
+            {
+                'requestedProvider': provider,
+                'requestedModel': model,
+                'providerFallback': False,
+                'sessionId': str(session_id) if session_id else None,
+                'agentName': 'Robin',
+                'commonPracticeAnswer': True,
+                'tokenEstimate': token_estimate,
+            },
+        )
+        post_turn_limits = _record_turn_and_refresh_limits(user, session_id, limits)
+        return jsonify({
+            'success': True,
+            'data': {
+                **_serialize_dashboard_memory(saved, question, common_answer, 'practice_guard', 'robin_common_practice', tags),
                 'requestedProvider': provider,
                 'requestedModel': model,
                 'providerFallback': False,
@@ -1342,6 +1404,9 @@ def _strip_robin_meta_preamble(answer):
         r'\bthe\s+(?:latest|current|most\s+recent)\b',
         r'\brecent\s+(?:uscis|immigration)\b',
         r'\bthis\s+(?:is|means|update)\b',
+        r'\bit\s+(?:is|\'s)\s+okay\b',
+        r'\bif\s+you\s+(?:do\s+not|don\'t)\s+know\b',
+        r'\byou\s+can\s+say\b',
         r'\bpractice\s+question\s*:',
         r'<(?:p|ul|ol|li|strong)\b',
     )
@@ -1360,7 +1425,6 @@ def _strip_robin_meta_preamble(answer):
         r'hi(?: there)?[!.:,]\s+|'
         r'hello[!.:,]\s+|'
         r'great[!.:,]\s+|'
-        r'sure[!.:,]\s+|'
         r'absolutely[!.:,]\s+|'
         r'yes[!.:,]\s+|'
         r'practice question\s*:'
