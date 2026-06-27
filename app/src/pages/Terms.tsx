@@ -89,7 +89,7 @@ export function Terms() {
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-3">6. User-Generated Content</h2>
               <p className="text-slate-700 leading-relaxed">
-                Any data you enter into the timeline builder or other interactive tools is stored locally on your device using browser storage. We do not collect, store, or have access to this information. You are responsible for maintaining the confidentiality of any information you enter.
+                Some browser-only practice activity may be stored locally on your device. If you sign in or use account-backed features such as progress tracking, PDF access, Robin, messages, sponsor interactions, or partner sync, related records may be processed and stored by the Service as described in our Privacy Policy. You are responsible for maintaining the confidentiality of any information you enter.
               </p>
             </section>
 

@@ -66,6 +66,12 @@ function PageShell({ title, description, onBack, children }: PageShellProps) {
           <Badge className="mb-3 border-0 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-900 hover:from-blue-100 hover:to-cyan-100">USCIS Interview Prep</Badge>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 leading-tight">{title}</h1>
           <p className="mt-4 font-semibold text-slate-700 leading-relaxed">{description}</p>
+          <div className="mt-4 flex gap-3 rounded-lg border border-slate-200 bg-white/90 p-4 text-sm font-semibold leading-relaxed text-slate-700 shadow-sm">
+            <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-700" />
+            <p>
+              Practice only. Spouse Interview is independent, not affiliated with USCIS or any government agency, and is not a law firm. This is not legal advice.
+            </p>
+          </div>
         </div>
         {children}
       </main>

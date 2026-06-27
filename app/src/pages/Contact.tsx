@@ -116,7 +116,7 @@ export function Contact() {
         <Card className="border-2 border-slate-200 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl">Send us a Message</CardTitle>
-            <CardDescription>Fill out the form below and we&apos;ll respond within 24-48 hours.</CardDescription>
+            <CardDescription>This opens your email app with a draft message; response timing depends on inbox volume.</CardDescription>
           </CardHeader>
           <CardContent>
             <>
@@ -217,7 +217,7 @@ export function Contact() {
               </CardHeader>
               <CardContent>
                 <p className="text-slate-700 text-sm font-medium">
-                  No account needed! Your progress is saved locally in your browser. You can use all features immediately without signing up.
+                  Many browsing and practice features work without an account. Sign in is required for account-backed features like saving memory across devices, secure PDF access, messages, partner sync, and admin-managed history.
                 </p>
               </CardContent>
             </Card>

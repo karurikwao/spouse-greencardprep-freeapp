@@ -3774,14 +3774,27 @@ def _publish_broadcast_row(row):
             )
             count += 1
             if row.get('send_email', True):
-                send_dashboard_message_email(
+                email_result = send_dashboard_message_email(
                     recipient['email'],
                     row.get('title') or 'New Spouse Interview dashboard message',
                     row.get('message') or '',
                     None,
                     str(row.get('id') or ''),
                 )
-        except Exception:
+                if isinstance(email_result, dict) and not email_result.get('success', True):
+                    logger.warning(
+                        'Broadcast email failed: broadcast_id=%s provider=%s status=%s',
+                        row.get('id'),
+                        email_result.get('provider') or 'unknown',
+                        email_result.get('status_code') or 'unknown',
+                    )
+        except Exception as exc:
+            logger.warning(
+                'Broadcast recipient delivery failed: broadcast_id=%s recipient=%s error=%s',
+                row.get('id'),
+                recipient.get('user_id'),
+                type(exc).__name__,
+            )
             continue
 
     try:
@@ -3793,7 +3806,8 @@ def _publish_broadcast_row(row):
             """,
             (count, row.get('id')),
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning('Broadcast sent_count update failed: broadcast_id=%s error=%s', row.get('id'), type(exc).__name__)
         pass
     return count
 

@@ -1152,7 +1152,7 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
         "green card interview, practice relationship/home-life questions, organize preparation next "
         "steps, and understand general immigration interview concepts. Do not handle refunds, billing, "
         "account access, PDF download problems, app bugs, or technical support; redirect those to the "
-        "support ticket area. Do not provide legal advice, immigration outcome predictions, or false "
+        "contact page or dashboard messages. Do not provide legal advice, immigration outcome predictions, or false "
         "certainty. If a question needs legal judgment, recommend that a licensed immigration attorney "
         "review it. If the user asks for a lawyer or attorney resource, you may reference only the "
         "admin-approved lawyer directory below and must include the affiliate/legal disclaimer. "

@@ -1,7 +1,8 @@
-import os
-import uuid
-import hmac
 import hashlib
+import hmac
+import os
+import re
+import uuid
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, send_file
 from auth import require_auth, require_admin, optional_auth
@@ -11,6 +12,7 @@ pdf_bp = Blueprint('pdf', __name__)
 
 PDF_STORAGE_PATH = os.getenv('PDF_STORAGE_PATH', './storage/pdfs')
 URL_SECRET = os.getenv('JWT_SECRET', 'change-this-secret')
+SAFE_FILE_KEY_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.\-/]{0,180}\.pdf$', re.IGNORECASE)
 PDF_DOWNLOAD_SOURCES = {
     'topic_page',
     'practice_mode',
@@ -38,8 +40,20 @@ def generate_signed_url():
 
     if not file_key:
         return jsonify({'success': False, 'error': 'fileKey is required'}), 400
+    file_key = str(file_key).strip()
+    if not is_safe_pdf_file_key(file_key):
+        return jsonify({'success': False, 'error': 'Invalid PDF file key'}), 400
 
     pdf_asset = db.query_one("SELECT * FROM pdf_assets WHERE file_key = %s", (file_key,))
+    if not pdf_asset:
+        return jsonify({'success': False, 'error': 'PDF asset not found'}), 404
+
+    try:
+        storage_path = pdf_asset_storage_path(file_key)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid PDF file key'}), 400
+    if not os.path.isfile(storage_path):
+        return jsonify({'success': False, 'error': 'PDF file not found'}), 404
 
     expires_at = int(datetime.now(timezone.utc).timestamp()) + 300
     message = f"{file_key}:{user['id']}:{expires_at}"
@@ -49,7 +63,7 @@ def generate_signed_url():
     try:
         db.call_function('record_pdf_download', (
             user['id'], user['email'], file_key,
-            pdf_asset.get('title') if pdf_asset else file_key,
+            pdf_asset.get('title') or file_key,
             topic_id, category_id, download_source, 'access_granted', None, None
         ))
     except Exception:
@@ -72,6 +86,9 @@ def serve_pdf():
 
     if not file_key or not expires or not sig:
         return jsonify({'error': 'Missing parameters'}), 400
+    file_key = str(file_key).strip()
+    if not is_safe_pdf_file_key(file_key):
+        return jsonify({'error': 'Invalid PDF file key'}), 400
 
     try:
         expires_int = int(expires)
@@ -86,15 +103,35 @@ def serve_pdf():
     if not hmac.compare_digest(sig, expected_sig):
         return jsonify({'error': 'Invalid signature'}), 403
 
-    storage_path = pdf_asset_storage_path(file_key)
-    if not os.path.exists(storage_path):
+    pdf_asset = db.query_one("SELECT file_key FROM pdf_assets WHERE file_key = %s", (file_key,))
+    if not pdf_asset:
+        return jsonify({'error': 'PDF asset not found'}), 404
+
+    try:
+        storage_path = pdf_asset_storage_path(file_key)
+    except ValueError:
+        return jsonify({'error': 'Invalid PDF file key'}), 400
+    if not os.path.isfile(storage_path):
         return jsonify({'error': 'PDF file not found'}), 404
 
     return send_file(storage_path, mimetype='application/pdf', as_attachment=False)
 
 
 def pdf_asset_storage_path(file_key):
-    return os.path.join(PDF_STORAGE_PATH, file_key)
+    storage_root = os.path.realpath(PDF_STORAGE_PATH)
+    candidate = os.path.realpath(os.path.join(storage_root, file_key))
+    if candidate != storage_root and not candidate.startswith(storage_root + os.sep):
+        raise ValueError('Invalid PDF file key')
+    return candidate
+
+
+def is_safe_pdf_file_key(file_key):
+    normalized = str(file_key or '').strip().replace('\\', '/')
+    if normalized != str(file_key or '').strip():
+        return False
+    if '..' in normalized.split('/'):
+        return False
+    return bool(SAFE_FILE_KEY_RE.fullmatch(normalized))
 
 
 @pdf_bp.route('/record-download', methods=['POST'])

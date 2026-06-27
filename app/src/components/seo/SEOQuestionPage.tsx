@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Bot, CheckCircle, ExternalLink, Lightbulb, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Bot, CheckCircle, ExternalLink, Lightbulb, Shield, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -168,6 +168,15 @@ export function SEOQuestionPage({ questionSlug, onBack, onPractice, onAskRobin }
               </CardContent>
             </Card>
           )}
+
+          <Card className="border-2 border-slate-200 bg-white/90 shadow-sm">
+            <CardContent className="flex gap-3 p-4 text-sm font-semibold leading-relaxed text-slate-700">
+              <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-700" />
+              <p>
+                Practice only. Spouse Interview is independent, not affiliated with USCIS or any government agency, and is not a law firm. This is not legal advice.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* CTA */}
           <Card className="question-practice-cta overflow-hidden border-0 bg-gradient-to-br from-blue-800 via-violet-700 to-rose-600 text-white shadow-2xl shadow-blue-200">
