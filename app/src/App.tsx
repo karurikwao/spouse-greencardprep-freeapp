@@ -730,9 +730,18 @@ function Hero({ onSignupClick, onOpenRobin }: { onSignupClick: () => void; onOpe
   const [robinDraft, setRobinDraft] = useState('');
   const scrollToTopics = () => document.getElementById('topics')?.scrollIntoView({ behavior: 'smooth' });
   const robinPromptChips = [
-    'Practice me for the interview',
-    'What evidence should we bring?',
-    'Quiz us on home-life questions',
+    {
+      label: 'Practice me for the interview',
+      className: 'border-amber-200 bg-gradient-to-r from-amber-300 via-orange-400 to-rose-500 !text-slate-950 shadow-orange-950/30 hover:from-amber-200 hover:via-orange-300 hover:to-rose-400',
+    },
+    {
+      label: 'What evidence should we bring?',
+      className: 'border-lime-200 bg-gradient-to-r from-lime-300 via-emerald-400 to-teal-500 !text-slate-950 shadow-emerald-950/30 hover:from-lime-200 hover:via-emerald-300 hover:to-teal-400',
+    },
+    {
+      label: 'Quiz us on home-life questions',
+      className: 'border-fuchsia-200 bg-gradient-to-r from-fuchsia-300 via-rose-400 to-orange-400 !text-slate-950 shadow-rose-950/30 hover:from-fuchsia-200 hover:via-rose-300 hover:to-orange-300',
+    },
   ];
 
   const submitRobinDraft = () => {
@@ -770,9 +779,9 @@ function Hero({ onSignupClick, onOpenRobin }: { onSignupClick: () => void; onOpe
             sample answers, progress tracking, and free PDF downloads to prepare for your green card interview together.
           </p>
 
-          <div className="mb-7 overflow-hidden rounded-2xl border border-white/25 bg-white/15 p-3 shadow-2xl shadow-slate-950/20 backdrop-blur-md">
-            <div className="mb-2 flex items-center gap-2 text-sm font-extrabold text-white">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/20">
+          <div className="robin-hero-panel mb-7 overflow-hidden rounded-2xl border-2 border-amber-300/80 bg-gradient-to-br from-amber-400/25 via-rose-500/20 to-emerald-400/20 p-3 shadow-2xl shadow-rose-950/30 backdrop-blur-md ring-2 ring-white/20">
+            <div className="mb-3 flex items-center gap-2 text-sm font-extrabold text-white drop-shadow">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-300 via-orange-400 to-rose-500 !text-slate-950 shadow-lg shadow-orange-950/30 ring-2 ring-white/60">
                 <Bot className="h-5 w-5" />
               </span>
               Ask Robin, your interview practice coach
@@ -788,12 +797,12 @@ function Hero({ onSignupClick, onOpenRobin }: { onSignupClick: () => void; onOpe
                   }
                 }}
                 placeholder="Ask Robin what to practice, how to answer, or what evidence to review..."
-                className="h-12 border-white/30 bg-white text-slate-950 font-semibold placeholder:text-slate-500"
+                className="h-[3.25rem] min-h-[3.25rem] border-2 border-amber-300 bg-white px-4 !text-base !font-extrabold !text-slate-950 shadow-inner shadow-amber-200/60 outline-none placeholder:!font-extrabold placeholder:!text-slate-700 focus-visible:ring-4 focus-visible:ring-yellow-300/80"
               />
               <Button
                 type="button"
                 onClick={submitRobinDraft}
-                className="h-12 shrink-0 bg-cyan-400 px-5 font-extrabold text-slate-950 shadow-lg shadow-slate-950/20 hover:bg-cyan-300"
+                className="h-[3.25rem] min-h-[3.25rem] shrink-0 border-2 border-yellow-200 bg-gradient-to-r from-yellow-300 via-orange-400 to-rose-500 px-5 !text-base !font-extrabold !text-slate-950 shadow-lg shadow-orange-950/30 hover:from-yellow-200 hover:via-orange-300 hover:to-rose-400"
               >
                 <Send className="mr-2 h-4 w-4" />
                 Ask Robin
@@ -802,12 +811,12 @@ function Hero({ onSignupClick, onOpenRobin }: { onSignupClick: () => void; onOpe
             <div className="mt-3 flex flex-wrap gap-2">
               {robinPromptChips.map(prompt => (
                 <button
-                  key={prompt}
+                  key={prompt.label}
                   type="button"
-                  onClick={() => onOpenRobin(prompt)}
-                  className="rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-white/25"
+                  onClick={() => onOpenRobin(prompt.label)}
+                  className={`rounded-full border-2 px-4 py-2 text-xs font-extrabold shadow-lg transition hover:-translate-y-0.5 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/70 ${prompt.className}`}
                 >
-                  {prompt}
+                  {prompt.label}
                 </button>
               ))}
             </div>

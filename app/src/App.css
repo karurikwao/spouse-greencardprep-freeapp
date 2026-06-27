@@ -1160,3 +1160,16 @@ textarea::placeholder {
   color: #f8fafc !important;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.72);
 }
+
+.hero-section .robin-hero-panel input,
+.hero-section .robin-hero-panel button,
+.hero-section .robin-hero-panel button svg {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+.hero-section .robin-hero-panel input::placeholder {
+  color: #334155 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
