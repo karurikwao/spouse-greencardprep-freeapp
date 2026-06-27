@@ -122,6 +122,8 @@ return { data: null, error: err instanceof Error ? err.message : 'Network error'
 // ============================================================================
 
 async function publishDueBroadcasts(): Promise<void> {
+const token = getToken();
+if (!token) return;
 try {
 await postJson('/api/broadcasts/publish-due', {});
 } catch {
@@ -137,6 +139,10 @@ success: boolean;
 data?: UserNotification[];
 error?: string;
 }> {
+const token = getToken();
+if (!token) {
+return { success: true, data: [] };
+}
 try {
 await publishDueBroadcasts();
 const { data, error } = await apiClient
@@ -172,6 +178,10 @@ success: boolean;
 count?: number;
 error?: string;
 }> {
+const token = getToken();
+if (!token) {
+return { success: true, count: 0 };
+}
 try {
 await publishDueBroadcasts();
 const { data, error } = await apiClient.rpc('get_unread_notification_count', {});
