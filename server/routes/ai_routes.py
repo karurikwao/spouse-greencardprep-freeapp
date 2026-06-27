@@ -1336,11 +1336,12 @@ def _strip_robin_meta_preamble(answer):
         'thinking:', 'plan:',
     )
     direct_answer_patterns = (
-        r'\bhere\s+(?:are|is)\b',
+        r'\bhere(?:\s+(?:are|is)|\'s)\b',
         r'\ba\s+few\s+(?:recent|current|important)\b',
         r'\bfor\s+your\s+(?:interview|marriage|case|preparation)\b',
         r'\bthe\s+(?:latest|current|most\s+recent)\b',
         r'\brecent\s+(?:uscis|immigration)\b',
+        r'\bthis\s+(?:is|means|update)\b',
         r'\bpractice\s+question\s*:',
         r'<(?:p|ul|ol|li|strong)\b',
     )
@@ -1375,12 +1376,14 @@ def _strip_robin_meta_preamble(answer):
     sentences = sentence_pattern.split(text)
     meta_patterns = (
         r'^(?:the\s+)?user\s+(?:is|asked|asks|wants|needs|seems|has|greeted|greeting)\b',
+        r'^(?:and\s+)?i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep|use|review|cite|stay|craft|focus|give|remind|end)\b',
         r'^i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep|use|review|cite|stay|craft|focus|give)\b',
         r'^we\s+(?:should|need\s+to|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep|use|review|cite|stay|craft|focus|give)\b',
         r'\bi\s+should\b',
         r'\bi\s+can\s+offer\b',
         r'^since\s+there(?:\s+is|\'s)\b.*\bi\s+should\b',
         r'^let\s+me\s+(?:give|provide|answer|explain|start|review|craft|use|cite|focus)\b',
+        r'^here(?:\s+(?:are|is)|\'s)\s+my\s+(?:plan|draft|response)\b',
         r'^(?:analysis|reasoning|thought|thinking|plan)\s*:',
         r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice|fresh web context|web context provided)\b',
     )
