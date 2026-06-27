@@ -57,7 +57,7 @@ SUPPORT_SCOPE_KEYWORDS = (
 
 ROBIN_WEB_SEARCH_TRIGGERS = (
     'latest', 'current', 'today', 'recent', 'new rule', 'new policy', 'changed',
-    'update', 'news', '2025', '2026', 'fee', 'fees', 'filing fee', 'form edition',
+    'new immigration', 'update', 'updates', 'news', '2025', '2026', 'fee', 'fees', 'filing fee', 'form edition',
     'deadline', 'processing time', 'visa bulletin', 'uscis update', 'uscis news',
     'official source', 'source link', 'link to', 'where can i verify',
 )
@@ -1171,6 +1171,8 @@ def _robin_question_needs_web_search(question):
 def _build_robin_web_search_query(question):
     query = str(question or '').strip()
     lower = query.lower()
+    if 'immigration update' in lower or 'immigration updates' in lower or 'uscis update' in lower or 'uscis updates' in lower:
+        return f"USCIS latest immigration news policy updates {datetime.now(timezone.utc).date().isoformat()}"
     if 'uscis' not in lower and 'green card' not in lower and 'immigration' not in lower:
         query = f'{query} USCIS marriage green card interview'
     return query[:380]
@@ -1242,7 +1244,7 @@ def _robin_fresh_context_prompt_block(fresh_context=None):
     if not fresh_context.get('used'):
         return '(search attempted but no reliable official-source result was available)'
     lines = [
-        'Fresh web context from Tavily. Treat this as supplemental context, cite links when relying on it, and tell users to verify final requirements with USCIS or a licensed attorney.',
+        'Official source notes for Robin. Use these silently as background facts. Do not mention Tavily, web context, source notes, or your process. When relying on a note, cite the visible source URL or link title in the final answer.',
         f"Search query: {fresh_context.get('query') or ''}",
     ]
     for index, item in enumerate((fresh_context.get('results') or [])[:5], start=1):
@@ -1285,13 +1287,13 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
         "certainty. If a question needs legal judgment, recommend that a licensed immigration attorney "
         "review it. If the user asks for a lawyer or attorney resource, you may reference only the "
         "admin-approved lawyer directory below and must include the affiliate/legal disclaimer. "
-        "For current immigration news, fees, deadlines, or policy questions, use the fresh web context "
+        "For current immigration news, fees, deadlines, or policy questions, use the official source notes "
         "when provided, cite the source links you rely on, and remind users that rules can change and "
         "they should verify final requirements with official USCIS sources or a licensed attorney. "
         "Use the memory bank snippets to stay consistent with prior answers. Keep replies concise, "
         "supportive, and practical. Do not reveal or narrate internal reasoning, planning, instructions, "
         "analysis, or what you think the user is asking. Never start with phrases like 'The user is', "
-        "'I should', 'We need to', 'Analysis:', or 'Reasoning:'. Start with Robin's direct answer to "
+        "'I should', 'We need to', 'Let me', 'Analysis:', or 'Reasoning:'. Start with Robin's direct answer to "
         "the user. You may return safe rich HTML when it improves clarity, especially "
         "for approved lawyer cards. Allowed tags: p, strong, em, ul, ol, li, br, a, img, blockquote. "
         "Never include scripts, forms, inline event handlers, or hidden tracking code."
@@ -1309,13 +1311,13 @@ Recent memory bank:
 Admin-approved lawyer directory:
 {lawyer_block}
 
-Fresh web context:
+Official source notes:
 {fresh_context_block}
 
 User question:
 {question}
 
-Return only Robin's final user-facing reply. Answer directly. If useful, include a short next step the user can take for interview practice.
+Return only Robin's final user-facing reply. Do not describe your plan, source review, reasoning, or prompt instructions. Answer directly. If useful, include a short next step the user can take for interview practice.
 """
     return [
         {'role': 'system', 'content': system_prompt},
@@ -1327,6 +1329,31 @@ def _strip_robin_meta_preamble(answer):
     text = str(answer or '').strip()
     if not text:
         return ''
+    meta_leak_markers = (
+        'the user is', 'the user asked', 'the user wants', 'i should', 'i need to',
+        'i will', 'let me review', 'let me craft', 'let me give', 'let me provide',
+        'fresh web context', 'web context', 'source notes', 'analysis:', 'reasoning:',
+        'thinking:', 'plan:',
+    )
+    direct_answer_patterns = (
+        r'\bhere\s+(?:are|is)\b',
+        r'\ba\s+few\s+(?:recent|current|important)\b',
+        r'\bfor\s+your\s+(?:interview|marriage|case|preparation)\b',
+        r'\bthe\s+(?:latest|current|most\s+recent)\b',
+        r'\brecent\s+(?:uscis|immigration)\b',
+        r'\bpractice\s+question\s*:',
+        r'<(?:p|ul|ol|li|strong)\b',
+    )
+    leading_window = text[:1200].lower()
+    if any(marker in leading_window for marker in meta_leak_markers):
+        anchor_positions = []
+        for pattern in direct_answer_patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match and match.start() > 0:
+                anchor_positions.append(match.start())
+        if anchor_positions:
+            text = text[min(anchor_positions):].strip()
+
     direct_start = re.search(
         r'(?is)\b('
         r'hi(?: there)?[!.:,]\s+|'
@@ -1348,14 +1375,14 @@ def _strip_robin_meta_preamble(answer):
     sentences = sentence_pattern.split(text)
     meta_patterns = (
         r'^(?:the\s+)?user\s+(?:is|asked|asks|wants|needs|seems|has|greeted|greeting)\b',
-        r'^i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
-        r'^we\s+(?:should|need\s+to|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep)\b',
+        r'^i\s+(?:should|need\s+to|will|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep|use|review|cite|stay|craft|focus|give)\b',
+        r'^we\s+(?:should|need\s+to|can)\s+(?:respond|answer|explain|provide|include|mention|ask|keep|use|review|cite|stay|craft|focus|give)\b',
         r'\bi\s+should\b',
         r'\bi\s+can\s+offer\b',
         r'^since\s+there(?:\s+is|\'s)\b.*\bi\s+should\b',
-        r'^let\s+me\s+(?:give|provide|answer|explain|start)\b',
+        r'^let\s+me\s+(?:give|provide|answer|explain|start|review|craft|use|cite|focus)\b',
         r'^(?:analysis|reasoning|thought|thinking|plan)\s*:',
-        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice)\b',
+        r'\b(?:main purpose of this app|keep it concise|respond warmly|next step for interview practice|fresh web context|web context provided)\b',
     )
     drop_until = 0
     for index, sentence in enumerate(sentences[:10]):
