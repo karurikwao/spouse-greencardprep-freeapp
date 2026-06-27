@@ -1703,6 +1703,13 @@ def admin_system_status():
             'defaultModel': default_model,
             'providers': providers,
             'settings': _public_ai_runtime_config(saved_ai),
+            'freshInfo': {
+                'provider': 'tavily',
+                'configured': bool(os.getenv('TAVILY_API_KEY', '').strip()),
+                'apiKeyEnvVar': 'TAVILY_API_KEY',
+                'searchDepth': os.getenv('TAVILY_SEARCH_DEPTH', 'basic') or 'basic',
+                'usedBy': 'Robin for current USCIS/source questions',
+            },
         },
         'stripe': {
             'mode': stripe_mode,

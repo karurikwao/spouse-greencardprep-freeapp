@@ -3337,6 +3337,33 @@ function AIConfigTab() {
             </div>
           </div>
 
+          <div className={cn(
+            'rounded-xl border p-4 shadow-sm',
+            status?.ai.freshInfo?.configured
+              ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-cyan-50'
+              : 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-slate-50'
+          )}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-sky-600 p-2 text-white">
+                  <Globe className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-950">Fresh Info Search</h4>
+                  <p className="mt-1 text-sm text-slate-700">
+                    Robin can use Tavily for current USCIS/source questions while keeping ordinary practice chats fast.
+                  </p>
+                  <div className="mt-3 grid gap-1 rounded-lg bg-white/85 p-3 text-xs text-slate-700 ring-1 ring-slate-200">
+                    <span>Provider: <span className="font-mono">{status?.ai.freshInfo?.provider || 'tavily'}</span></span>
+                    <span>Key: <span className="font-mono">{status?.ai.freshInfo?.apiKeyEnvVar || 'TAVILY_API_KEY'}</span></span>
+                    <span>Search depth: <span className="font-mono">{status?.ai.freshInfo?.searchDepth || 'basic'}</span></span>
+                  </div>
+                </div>
+              </div>
+              <ConfigBadge configured={Boolean(status?.ai.freshInfo?.configured)} />
+            </div>
+          </div>
+
           <Separator />
 
           <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-4">

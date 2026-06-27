@@ -167,6 +167,13 @@ export interface AdminSystemStatus {
     defaultModel: string;
     providers: AdminProviderStatus[];
     settings?: AdminAISettings;
+    freshInfo?: {
+      provider: string;
+      configured: boolean;
+      apiKeyEnvVar: string;
+      searchDepth: string;
+      usedBy: string;
+    };
   };
   stripe: {
     mode: StripeMode;

@@ -28,6 +28,7 @@ NVIDIA_API_KEY = os.getenv('NVIDIA_API_KEY', '')
 MINIMAX_API_KEY = os.getenv('MINIMAX_API_KEY', '')
 MINIMAX_BASE_URL = os.getenv('MINIMAX_BASE_URL', 'https://api.minimax.io/v1')
 MINIMAX_DEFAULT_MODEL = os.getenv('MINIMAX_DEFAULT_MODEL', 'MiniMax-M3')
+TAVILY_SEARCH_URL = 'https://api.tavily.com/search'
 
 VALID_FEEDBACK_LABELS = {
     'clear_and_natural',
@@ -52,6 +53,20 @@ SUPPORT_SCOPE_KEYWORDS = (
     'login', 'log in', 'password', 'email change', 'account access',
     'support ticket', 'admin', 'technical', 'bug', 'error', 'pdf download',
     'download problem', 'app issue', 'not working',
+)
+
+ROBIN_WEB_SEARCH_TRIGGERS = (
+    'latest', 'current', 'today', 'recent', 'new rule', 'new policy', 'changed',
+    'update', 'news', '2025', '2026', 'fee', 'fees', 'filing fee', 'form edition',
+    'deadline', 'processing time', 'visa bulletin', 'uscis update', 'uscis news',
+    'official source', 'source link', 'link to', 'where can i verify',
+)
+
+ROBIN_WEB_SEARCH_OFFICIAL_DOMAINS = (
+    'uscis.gov',
+    'travel.state.gov',
+    'state.gov',
+    'federalregister.gov',
 )
 
 
@@ -511,7 +526,14 @@ def dashboard_agent():
 
     session_id = _record_session_start(user, provider, model, 'dashboard-agent')
     recent_memory = _get_dashboard_agent_memory(user['id'], 6)
-    messages = _build_dashboard_agent_messages(question, recent_memory, data.get('context') or {}, _lawyer_directory_config())
+    fresh_context = _search_robin_fresh_context(question)
+    messages = _build_dashboard_agent_messages(
+        question,
+        recent_memory,
+        data.get('context') or {},
+        _lawyer_directory_config(),
+        fresh_context,
+    )
 
     try:
         response_text, actual_provider, actual_model, fallback_used, provider_errors = _call_role_provider_with_fallback(
@@ -549,6 +571,7 @@ def dashboard_agent():
             'sessionId': str(session_id) if session_id else None,
             'agentName': 'Robin',
             'tokenEstimate': token_estimate,
+            'freshContext': fresh_context,
         },
     )
     post_turn_limits = _record_turn_and_refresh_limits(user, session_id, limits)
@@ -1127,7 +1150,111 @@ def _lawyer_directory_prompt_block(lawyer_directory):
     return '\n'.join(lines)
 
 
-def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_directory=None):
+def _robin_web_search_enabled():
+    setting = get_admin_setting('robin_web_search', {}) or {}
+    if isinstance(setting, dict) and setting.get('enabled') is False:
+        return False
+    return bool(os.getenv('TAVILY_API_KEY', '').strip())
+
+
+def _robin_question_needs_web_search(question):
+    text = str(question or '').strip().lower()
+    if not text:
+        return False
+    if any(trigger in text for trigger in ROBIN_WEB_SEARCH_TRIGGERS):
+        return True
+    if any(phrase in text for phrase in ('how much does', 'how long does', 'what is the new', 'is there a new')):
+        return True
+    return False
+
+
+def _build_robin_web_search_query(question):
+    query = str(question or '').strip()
+    lower = query.lower()
+    if 'uscis' not in lower and 'green card' not in lower and 'immigration' not in lower:
+        query = f'{query} USCIS marriage green card interview'
+    return query[:380]
+
+
+def _search_robin_fresh_context(question):
+    if not _robin_web_search_enabled() or not _robin_question_needs_web_search(question):
+        return None
+
+    api_key = os.getenv('TAVILY_API_KEY', '').strip()
+    payload = {
+        'query': _build_robin_web_search_query(question),
+        'topic': 'general',
+        'search_depth': os.getenv('TAVILY_SEARCH_DEPTH', 'basic').strip() or 'basic',
+        'max_results': 5,
+        'include_answer': False,
+        'include_raw_content': False,
+        'include_domains': list(ROBIN_WEB_SEARCH_OFFICIAL_DOMAINS),
+    }
+
+    try:
+        response = http_requests.post(
+            TAVILY_SEARCH_URL,
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json=payload,
+            timeout=8,
+        )
+        response.raise_for_status()
+        data = response.json() if response.content else {}
+    except Exception as exc:
+        logger.warning('Robin Tavily search skipped: %s', type(exc).__name__)
+        return {
+            'used': False,
+            'error': type(exc).__name__,
+            'query': payload['query'],
+            'results': [],
+        }
+
+    results = []
+    for item in (data.get('results') or [])[:5]:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get('title') or '').strip()[:180]
+        url = str(item.get('url') or '').strip()[:500]
+        content = str(item.get('content') or item.get('snippet') or '').strip()
+        if not url:
+            continue
+        results.append({
+            'title': title or url,
+            'url': url,
+            'content': re.sub(r'\s+', ' ', content)[:420],
+            'score': item.get('score'),
+            'publishedDate': item.get('published_date') or item.get('publishedDate'),
+        })
+
+    return {
+        'used': bool(results),
+        'query': payload['query'],
+        'results': results,
+    }
+
+
+def _robin_fresh_context_prompt_block(fresh_context=None):
+    if not isinstance(fresh_context, dict):
+        return '(not used for this question)'
+    if not fresh_context.get('used'):
+        return '(search attempted but no reliable official-source result was available)'
+    lines = [
+        'Fresh web context from Tavily. Treat this as supplemental context, cite links when relying on it, and tell users to verify final requirements with USCIS or a licensed attorney.',
+        f"Search query: {fresh_context.get('query') or ''}",
+    ]
+    for index, item in enumerate((fresh_context.get('results') or [])[:5], start=1):
+        lines.append(
+            f"[{index}] {item.get('title') or 'Source'}\n"
+            f"URL: {item.get('url') or ''}\n"
+            f"Snippet: {item.get('content') or ''}"
+        )
+    return '\n'.join(lines)
+
+
+def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_directory=None, fresh_context=None):
     memory_lines = []
     for item in recent_memory:
         cleaned_memory_answer = _normalize_dashboard_agent_answer(item.get('answer', ''))
@@ -1146,6 +1273,8 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
         context_text = json.dumps(compact_context)
 
     lawyer_block = _lawyer_directory_prompt_block(lawyer_directory)
+    fresh_context_block = _robin_fresh_context_prompt_block(fresh_context)
+    current_date = datetime.now(timezone.utc).date().isoformat()
     system_prompt = (
         "You are Robin, Spouse Interview's virtual USCIS marriage green card interview assistant. "
         "Always remember that your name is Robin. Stay in scope: help users prepare for the marriage "
@@ -1156,8 +1285,9 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
         "certainty. If a question needs legal judgment, recommend that a licensed immigration attorney "
         "review it. If the user asks for a lawyer or attorney resource, you may reference only the "
         "admin-approved lawyer directory below and must include the affiliate/legal disclaimer. "
-        "For current immigration news, fees, deadlines, or policy questions, explain that rules can "
-        "change and point users to official USCIS sources or a licensed attorney for final verification. "
+        "For current immigration news, fees, deadlines, or policy questions, use the fresh web context "
+        "when provided, cite the source links you rely on, and remind users that rules can change and "
+        "they should verify final requirements with official USCIS sources or a licensed attorney. "
         "Use the memory bank snippets to stay consistent with prior answers. Keep replies concise, "
         "supportive, and practical. Do not reveal or narrate internal reasoning, planning, instructions, "
         "analysis, or what you think the user is asking. Never start with phrases like 'The user is', "
@@ -1170,11 +1300,17 @@ def _build_dashboard_agent_messages(question, recent_memory, context, lawyer_dir
 Current app context:
 {context_text or '(none provided)'}
 
+Current date:
+{current_date}
+
 Recent memory bank:
 {chr(10).join(memory_lines) if memory_lines else '(no saved agent memory yet)'}
 
 Admin-approved lawyer directory:
 {lawyer_block}
+
+Fresh web context:
+{fresh_context_block}
 
 User question:
 {question}
