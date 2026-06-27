@@ -2494,11 +2494,19 @@ function App() {
   useCaptureReferralOnMount();
   
   const { page, navigate, questionSlug, inviteCode, topicSlug, situationSlug, clusterSlug, supportingSlug } = usePage();
+  const [routeAuthModalOpen, setRouteAuthModalOpen] = useState(false);
+  const [routeAuthDefaultTab, setRouteAuthDefaultTab] = useState<'login' | 'signup'>('signup');
+  const [authReturnPage, setAuthReturnPage] = useState<Page | null>(null);
   const appBackPage: Page = typeof window !== 'undefined' && localStorage.getItem('auth_token') ? 'dashboard' : 'home';
   const navigateToAppBack = () => navigate(appBackPage);
   const openRobinWithDraft = (draft?: string) => {
     saveRobinDraft(draft);
     navigate('robin');
+  };
+  const openRouteAuthModal = (tab: 'login' | 'signup' = 'signup', returnPage: Page = page) => {
+    setRouteAuthDefaultTab(tab);
+    setAuthReturnPage(returnPage);
+    setRouteAuthModalOpen(true);
   };
   const showRobinLauncher = [
     'home',
@@ -2526,7 +2534,12 @@ function App() {
               {page === 'home' && <HomePage navigate={navigate} />}
               {page === 'dashboard' && <HomePage navigate={navigate} initialViewMode="dashboard" />}
               {page === 'messages' && <MessagesPage onBack={() => navigate('dashboard')} />}
-              {page === 'robin' && <RobinPage onBack={() => navigate('dashboard')} />}
+              {page === 'robin' && (
+                <RobinPage
+                  onBack={() => navigate('dashboard')}
+                  onRequireAuth={() => openRouteAuthModal('signup', 'robin')}
+                />
+              )}
               {page === 'pdf-library' && <PDFLibraryPage onBack={() => navigate('dashboard')} onOpenRobin={openRobinWithDraft} />}
               {page === 'timeline-builder' && <RelationshipTimelinePage onBack={navigateToAppBack} />}
               {page === 'readiness' && <HomePage navigate={navigate} initialViewMode="readiness" />}
@@ -2580,6 +2593,20 @@ function App() {
             {showRobinLauncher && (
               <RobinFloatingLauncher onOpenRobin={() => openRobinWithDraft('Help me practice for my USCIS marriage interview.')} />
             )}
+
+            <AuthModal
+              isOpen={routeAuthModalOpen}
+              onClose={() => {
+                setRouteAuthModalOpen(false);
+                setAuthReturnPage(null);
+              }}
+              defaultTab={routeAuthDefaultTab}
+              onAuthenticated={() => {
+                setRouteAuthModalOpen(false);
+                navigate(authReturnPage || 'dashboard');
+                setAuthReturnPage(null);
+              }}
+            />
             
             {/* Verification code injection - body_end */}
             <VerificationCodeInjector placement="body_end" />

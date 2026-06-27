@@ -17,6 +17,7 @@ import {
 
 interface RobinPageProps {
   onBack: () => void;
+  onRequireAuth?: () => void;
 }
 
 const creditCurrency = new Intl.NumberFormat(undefined, {
@@ -241,7 +242,7 @@ function RobinCreditTopUpPanel({ isAuthenticated }: { isAuthenticated: boolean }
   );
 }
 
-export function RobinPage({ onBack }: RobinPageProps) {
+export function RobinPage({ onBack, onRequireAuth }: RobinPageProps) {
   const { isAuthenticated, user } = useOptionalAuth();
 
   return (
@@ -294,7 +295,7 @@ export function RobinPage({ onBack }: RobinPageProps) {
 
         <RobinCreditTopUpPanel isAuthenticated={isAuthenticated} />
 
-        <VirtualAgentPanel mode="page" />
+        <VirtualAgentPanel mode="page" onRequireAuth={onRequireAuth} />
       </main>
     </div>
   );

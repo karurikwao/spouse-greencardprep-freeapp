@@ -36,6 +36,7 @@ interface VirtualAgentPanelProps {
   className?: string;
   mode?: 'card' | 'page';
   onOpenFullPage?: () => void;
+  onRequireAuth?: () => void;
 }
 
 function formatDate(value?: string | null) {
@@ -55,7 +56,7 @@ function formatTime(value?: string | null) {
   });
 }
 
-export function VirtualAgentPanel({ className, mode = 'card', onOpenFullPage }: VirtualAgentPanelProps) {
+export function VirtualAgentPanel({ className, mode = 'card', onOpenFullPage, onRequireAuth }: VirtualAgentPanelProps) {
   const { isAuthenticated } = useOptionalAuth();
   const [question, setQuestion] = useState('');
   const [history, setHistory] = useState<DashboardAgentEntry[]>([]);
@@ -168,7 +169,8 @@ export function VirtualAgentPanel({ className, mode = 'card', onOpenFullPage }: 
     if (!trimmed) return;
 
     if (!isAuthenticated) {
-      setError('Sign in to chat with Robin and save the answer to your memory bank.');
+      setError('Sign in to chat with Robin for free');
+      onRequireAuth?.();
       return;
     }
 
