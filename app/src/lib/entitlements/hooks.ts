@@ -241,7 +241,7 @@ export function usePlanStatus() {
       canRenew: subscription.isExpired || (!subscription.isActive && !subscription.isTrial),
       
       // Access summary
-      hasPremiumAccess: subscription.isPaid && subscription.hasAccess,
+      hasAccountAccess: subscription.hasAccess,
     };
 
     return {
@@ -303,8 +303,8 @@ export function useAIUsageDisplay() {
 
 function getPlanDisplayName(planType: string): string {
   const names: Record<string, string> = {
-    trial: 'Free Trial',
-    monthly: 'Premium Monthly',
+    trial: 'Free Account',
+    monthly: 'Archived Monthly Plan',
     lifetime: 'Lifetime Access',
     interviewPass: '90-Day Interview Pass',
   };

@@ -1,7 +1,7 @@
 /**
  * Free-app access prompts.
  *
- * These exports replace the older upgrade/paywall components while preserving
+ * These exports replace the older access-gate components while preserving
  * import compatibility for legacy feature-gate callers.
  */
 
@@ -71,7 +71,7 @@ function getPromptCopy(
 
   return {
     title: `${featureName} is included`,
-    message: `${progressLine}This feature belongs in the free app experience. If any limit is needed, it should be handled as a usage limit rather than a premium subscription gate.`,
+    message: `${progressLine}This feature belongs in the free app experience. If any limit is needed, it should be handled as a usage limit rather than a purchase gate.`,
     badge: 'Free App Feature',
   };
 }
@@ -219,7 +219,7 @@ export function TrialBanner({ daysRemaining, onUpgrade, className }: TrialBanner
         <div>
           <p className="font-bold text-slate-950">Daily free app access</p>
           <p className="text-sm leading-6 text-slate-700">
-            Legacy trial data shows {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining, but the free app should stay available.
+            Archived account data shows {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining, but the free app should stay available.
           </p>
         </div>
       </div>

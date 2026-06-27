@@ -39,7 +39,7 @@ export function RefundRequestForm({ onBack }: RefundRequestFormProps) {
             </div>
             <CardTitle className="text-2xl">The core app is free</CardTitle>
             <CardDescription className="text-base">
-              There is no paid-plan request to submit for free app access. If a future optional
+              There is no purchase request to submit for free app access. If a future optional
               Robin credit purchase needs manual review, contact Spouse Interview by email.
             </CardDescription>
           </CardHeader>

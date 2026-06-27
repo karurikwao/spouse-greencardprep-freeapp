@@ -2,7 +2,7 @@
  * Free-app Partner Sync wrapper.
  *
  * The exported name stays the same so existing imports keep working, but the
- * feature is no longer behind a premium entitlement gate.
+ * feature is no longer behind a purchase gate.
  */
 
 import { PartnerSync } from './PartnerSync';

@@ -172,10 +172,10 @@ export function canChooseModel(subscription: Subscription | EffectiveSubscriptio
 // ============================================================================
 
 /**
- * Legacy paid-access helper. In the free app this means the signed-in user has
- * usable account access, not that they bought a paid plan.
+ * Legacy access helper. In the free app this means the signed-in user has
+ * usable account access.
  */
-export function hasPremiumAccess(
+export function hasAccountAccess(
   subscription: Subscription | EffectiveSubscription | null
 ): boolean {
   if (!subscription) return false;

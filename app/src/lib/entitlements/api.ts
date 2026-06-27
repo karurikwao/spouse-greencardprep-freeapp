@@ -375,7 +375,7 @@ turnsRemaining: 0,
 * Free account entitlements for authenticated users.
 *
 * The legacy plan_type remains "trial" for database compatibility, but this is
-* now the free app baseline rather than a paid-plan trial.
+* now the free app baseline rather than a legacy trial.
 */
 // @ts-expect-error Function may be used in future implementations
 function getDefaultTrialEntitlements(): UserEntitlements {

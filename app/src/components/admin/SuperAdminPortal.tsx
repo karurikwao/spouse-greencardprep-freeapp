@@ -2441,7 +2441,7 @@ function AIConfigTab() {
     setSettingsNotice('');
     try {
       setWelcomeSettings(await saveAdminWelcomeMessages(welcomeSettings));
-      setSettingsNotice('Automatic welcome and upgrade messages saved.');
+      setSettingsNotice('Automatic welcome and Robin access messages saved.');
     } catch (err) {
       setSettingsNotice(err instanceof Error ? err.message : 'Unable to save welcome messages');
     } finally {

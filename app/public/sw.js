@@ -1,5 +1,5 @@
 // Service Worker for Spouse Interview PWA
-const CACHE_NAME = 'spouse-interview-free-v3';
+const CACHE_NAME = 'spouse-interview-free-v4';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
@@ -25,6 +25,8 @@ const NETWORK_ONLY_PATH_PREFIXES = [
   '/messages',
   '/robin',
   '/reset-password',
+  '/admin',
+  '/superadmin',
   '/billing-',
   '/pricing',
 ];

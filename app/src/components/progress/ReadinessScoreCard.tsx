@@ -14,7 +14,7 @@ interface ReadinessScoreCardProps {
   questionsPracticed?: number;
   totalQuestions?: number;
   className?: string;
-  isPremium?: boolean;
+  showFreeBadge?: boolean;
 }
 
 export function ReadinessScoreCard({
@@ -22,7 +22,7 @@ export function ReadinessScoreCard({
   questionsPracticed = 0,
   totalQuestions = 100,
   className,
-  isPremium = false,
+  showFreeBadge = true,
 }: ReadinessScoreCardProps) {
   // Validate and clamp score to valid range
   const validScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
@@ -52,7 +52,7 @@ export function ReadinessScoreCard({
             Your readiness increases as you review topics and practice questions
           </p>
         </div>
-        {!isPremium && (
+        {showFreeBadge && (
           <Badge variant="secondary" className="text-xs">
             <Sparkles className="w-3 h-3 mr-1" />
             Free

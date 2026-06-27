@@ -2,7 +2,7 @@
  * Free-app access modal.
  *
  * This component intentionally keeps the old PricingModal export so legacy
- * triggers do not open paid-plan checkout in the free app.
+ * triggers do not open purchase checkout in the free app.
  */
 
 import { Bot, Check, FileText, MessageSquare, Sparkles, Users, X } from 'lucide-react';
@@ -29,7 +29,7 @@ const INCLUDED_FEATURES = [
   {
     icon: Users,
     title: 'Partner practice',
-    description: 'Use spouse-sync practice tools without a premium gate.',
+    description: 'Use spouse-sync practice tools without a purchase gate.',
   },
   {
     icon: Bot,
@@ -74,7 +74,7 @@ export function PricingModal({
             Free App Access
           </Badge>
           <CardTitle className="text-2xl font-extrabold text-slate-950">
-            No paid plan is required
+            No purchase is required
           </CardTitle>
           <CardDescription className="mx-auto max-w-xl text-base text-slate-600">
             Spouse Interview is being prepared as a free app supported by ads, sponsor resources,

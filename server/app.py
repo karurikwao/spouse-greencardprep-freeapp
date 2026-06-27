@@ -74,6 +74,27 @@ def _run_robin_saved_answer_startup_cleanup():
         logging.warning('Robin saved-answer startup cleanup skipped: %s', exc)
 
 
+def _cleanup_example_invalid_probe_users():
+    enabled = os.getenv('CLEANUP_EXAMPLE_INVALID_USERS_ON_STARTUP', '').strip().lower()
+    if enabled != 'true':
+        return
+
+    try:
+        import db
+        deleted = db.query_all(
+            """
+            DELETE FROM users
+            WHERE lower(email) LIKE %s
+            RETURNING id::text, email
+            """,
+            ('%@example.invalid',),
+        )
+        if deleted:
+            logging.info('Cleaned up %s example.invalid probe users.', len(deleted))
+    except Exception as exc:
+        logging.warning('Example.invalid probe user cleanup skipped: %s', exc)
+
+
 def _serve_index_with_ad_settings(static_dir):
     index_path = os.path.join(static_dir, 'index.html')
     try:
@@ -113,6 +134,7 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix='/api')
 
     _run_robin_saved_answer_startup_cleanup()
+    _cleanup_example_invalid_probe_users()
 
     @app.route('/api', methods=['GET'])
     @app.route('/api/health', methods=['GET'])
@@ -141,6 +163,19 @@ def create_app():
         def serve_frontend(path):
             if path.startswith('api/'):
                 return jsonify({'error': 'Not found'}), 404
+            if path == 'favicon.ico':
+                favicon_path = os.path.join(static_dir, 'favicon.ico')
+                if os.path.isfile(favicon_path):
+                    return send_from_directory(static_dir, 'favicon.ico')
+                png_favicon = os.path.join(static_dir, 'icons', 'icon-192x192.png')
+                if os.path.isfile(png_favicon):
+                    return send_from_directory(os.path.join(static_dir, 'icons'), 'icon-192x192.png')
+                return Response('', 404, {'Content-Type': 'image/x-icon'})
+            if path == 'service-worker.js':
+                sw_path = os.path.join(static_dir, 'sw.js')
+                if os.path.isfile(sw_path):
+                    return send_from_directory(static_dir, 'sw.js', mimetype='application/javascript')
+                return Response('', 404, {'Content-Type': 'application/javascript'})
             requested_path = os.path.join(static_dir, path)
             if path and os.path.exists(requested_path) and os.path.isfile(requested_path):
                 return send_from_directory(static_dir, path)

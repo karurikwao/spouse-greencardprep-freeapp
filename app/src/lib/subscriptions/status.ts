@@ -18,7 +18,7 @@ import { PLAN_CONFIG } from '@/lib/plans';
 // ============================================================================
 
 export const STATUS_LABELS: Record<SubscriptionStatus | EffectiveStatus, string> = {
-  trialing: 'Free Trial',
+  trialing: 'Free Account',
   active: 'Active',
   canceled: 'Canceled',
   expired: 'Expired',
@@ -28,13 +28,13 @@ export const STATUS_LABELS: Record<SubscriptionStatus | EffectiveStatus, string>
 };
 
 export const STATUS_DESCRIPTIONS: Record<SubscriptionStatus | EffectiveStatus, string> = {
-  trialing: 'You\'re currently on a free trial.',
-  active: 'Your subscription is active and in good standing.',
-  canceled: 'Your subscription has been canceled but you still have access until the end of your billing period.',
-  expired: 'Your subscription has expired. Upgrade to regain access.',
-  past_due: 'There\'s an issue with your payment. Please update your payment method.',
-  grace_period: 'Your payment failed but you have a grace period to update your payment method.',
-  inactive: 'You don\'t have an active subscription.',
+  trialing: 'Your free account access is active.',
+  active: 'Your free app access is active.',
+  canceled: 'This archived access record is no longer changing core app access.',
+  expired: 'This archived access record has expired, but core app access remains free.',
+  past_due: 'This archived access record needs review.',
+  grace_period: 'This archived access record is in a grace state.',
+  inactive: 'Your free app access can be restored by signing in again.',
 };
 
 // ============================================================================

@@ -34,7 +34,7 @@ export function RefundInterceptScreen({
             <CardTitle className="text-2xl">No payment is required</CardTitle>
             <CardDescription className="text-base">
               Spouse Interview is being prepared as a free app. Core practice tools,
-              PDFs, partner practice, and daily Robin usage do not require a paid plan.
+              PDFs, partner practice, and daily Robin usage do not require a purchase.
             </CardDescription>
           </CardHeader>
 

@@ -1,7 +1,7 @@
 /**
  * Free-app status panel.
  *
- * This replaces the older paid-plan status panel while keeping the same export.
+ * This replaces the older purchase-status panel while keeping the same export.
  */
 
 import { Bot, CheckCircle, Download, MessageSquare, Sparkles, Users } from 'lucide-react';

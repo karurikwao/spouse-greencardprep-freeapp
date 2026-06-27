@@ -84,7 +84,7 @@ export {
   canUseCoupleCompare,
   canChooseProvider,
   canChooseModel,
-  hasPremiumAccess,
+  hasAccountAccess,
   hasLifetimeAccess,
   hasActiveTrial,
   getSubscriptionAiLimits,
@@ -180,7 +180,7 @@ export async function openManageSubscription(): Promise<PaymentActionResult> {
   if (!success) {
     return {
       success: false,
-      error: 'Unable to open billing portal. You may not have an active subscription.',
+      error: 'Unable to open the account portal. Core app access remains free.',
     };
   }
   
@@ -190,7 +190,7 @@ export async function openManageSubscription(): Promise<PaymentActionResult> {
 
 /**
  * Restore purchase by opening the Stripe billing portal.
- * Web users can verify invoices, payment methods, and active subscriptions there.
+ * Web users can verify archived account and purchase records there if this compatibility path is enabled.
  */
 export async function restorePurchase(): Promise<PaymentActionResult> {
   return openManageSubscription();

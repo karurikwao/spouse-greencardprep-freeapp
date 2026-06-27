@@ -654,7 +654,7 @@ section {
 
 main [data-slot="card"]:not([class*="text-white"]),
 section [data-slot="card"]:not([class*="text-white"]),
-.premium-upgrade-shell {
+.free-access-shell {
   --panel-accent: var(--panel-blue);
   --panel-accent-2: var(--panel-cyan);
   --panel-glow: rgba(var(--panel-blue), 0.14);
@@ -672,7 +672,7 @@ section [data-slot="card"]:not([class*="text-white"]),
 
 main [data-slot="card"]:not([class*="text-white"])::before,
 section [data-slot="card"]:not([class*="text-white"])::before,
-.premium-upgrade-shell::before {
+.free-access-shell::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -996,7 +996,7 @@ textarea::placeholder {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
-.premium-upgrade-shell {
+.free-access-shell {
   max-height: calc(100dvh - 1rem) !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
@@ -1005,7 +1005,7 @@ textarea::placeholder {
   pointer-events: auto !important;
 }
 
-.premium-upgrade-overlay {
+.free-access-overlay {
   align-items: flex-start !important;
   max-height: 100dvh !important;
   overflow-x: hidden !important;
@@ -1016,32 +1016,32 @@ textarea::placeholder {
   touch-action: pan-y;
 }
 
-.premium-upgrade-overlay .premium-upgrade-shell,
-.premium-upgrade-overlay .premium-upgrade-shell * {
+.free-access-overlay .free-access-shell,
+.free-access-overlay .free-access-shell * {
   pointer-events: auto !important;
 }
 
-.premium-upgrade-overlay .premium-upgrade-shell {
+.free-access-overlay .free-access-shell {
   max-height: none !important;
   overflow: visible !important;
 }
 
-.premium-upgrade-shell [data-slot="card-content"] {
+.free-access-shell [data-slot="card-content"] {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
 }
 
-.premium-upgrade-shell::-webkit-scrollbar {
+.free-access-shell::-webkit-scrollbar {
   width: 0.65rem;
 }
 
-.premium-upgrade-shell::-webkit-scrollbar-thumb {
+.free-access-shell::-webkit-scrollbar-thumb {
   border: 2px solid #ffffff;
   border-radius: 999px;
   background: linear-gradient(180deg, #2563eb, #06b6d4, #f59e0b);
 }
 
 @media (max-width: 640px), (max-height: 760px) {
-  .premium-upgrade-shell {
+  .free-access-shell {
     margin-block: 0.35rem !important;
   }
 }
@@ -1055,10 +1055,10 @@ textarea::placeholder {
   pointer-events: none;
 }
 
-.premium-pdf-cta,
-[data-slot="button"].premium-pdf-cta,
-.premium-pdf-link-cta,
-.premium-pdf-icon-cta {
+.included-pdf-cta,
+[data-slot="button"].included-pdf-cta,
+.included-pdf-link-cta,
+.included-pdf-icon-cta {
   position: relative !important;
   overflow: hidden !important;
   border: 0 !important;
@@ -1069,14 +1069,14 @@ textarea::placeholder {
     0 14px 28px rgba(225, 29, 72, 0.30),
     0 6px 18px rgba(245, 158, 11, 0.28) !important;
   text-shadow: 0 1px 1px rgba(15, 23, 42, 0.35) !important;
-  animation: premiumPdfGlow 2.1s ease-in-out infinite, premiumPdfSweep 4.5s linear infinite !important;
+  animation: includedPdfGlow 2.1s ease-in-out infinite, includedPdfSweep 4.5s linear infinite !important;
   transform: translateZ(0);
 }
 
-.premium-pdf-cta:hover,
-[data-slot="button"].premium-pdf-cta:hover,
-.premium-pdf-link-cta:hover,
-.premium-pdf-icon-cta:hover {
+.included-pdf-cta:hover,
+[data-slot="button"].included-pdf-cta:hover,
+.included-pdf-link-cta:hover,
+.included-pdf-icon-cta:hover {
   color: #ffffff !important;
   transform: translateY(-1px) scale(1.025) !important;
   box-shadow:
@@ -1084,19 +1084,19 @@ textarea::placeholder {
     0 8px 22px rgba(245, 158, 11, 0.34) !important;
 }
 
-.premium-pdf-cta::after,
-.premium-pdf-link-cta::after {
+.included-pdf-cta::after,
+.included-pdf-link-cta::after {
   content: "";
   position: absolute;
   inset: -40% auto -40% -65%;
   width: 45%;
   transform: rotate(18deg);
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
-  animation: premiumPdfShine 2.8s ease-in-out infinite;
+  animation: includedPdfShine 2.8s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes premiumPdfGlow {
+@keyframes includedPdfGlow {
   0%,
   100% {
     filter: saturate(1.04) brightness(1);
@@ -1106,7 +1106,7 @@ textarea::placeholder {
   }
 }
 
-@keyframes premiumPdfSweep {
+@keyframes includedPdfSweep {
   0% {
     background-position: 0% 50%;
   }
@@ -1115,7 +1115,7 @@ textarea::placeholder {
   }
 }
 
-@keyframes premiumPdfShine {
+@keyframes includedPdfShine {
   0% {
     left: -65%;
   }

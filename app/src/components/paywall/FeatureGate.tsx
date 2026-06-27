@@ -1,7 +1,7 @@
 /**
  * Free-app feature gate compatibility layer.
  *
- * The old app used live entitlements to blur or block premium features. In the
+ * The old app used live entitlements to blur or block some features. In the
  * free-app version, core feature access is open; cost control belongs in the
  * Robin daily-limit and optional credit-pack logic instead.
  */

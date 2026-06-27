@@ -16,7 +16,7 @@ export function BillingCancelPage() {
           </div>
           <CardTitle className="text-2xl">No Payment Was Processed</CardTitle>
           <CardDescription className="mx-auto max-w-sm">
-            You can continue using the free app. Core practice tools do not require a paid plan.
+            You can continue using the free app. Core practice tools do not require a purchase.
           </CardDescription>
         </CardHeader>
 

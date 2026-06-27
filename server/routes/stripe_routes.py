@@ -29,23 +29,23 @@ PLAN_PRICES = {
 }
 
 PLAN_LABELS = {
-    'monthly': 'Spouse Interview Premium Monthly - Robin + PDF Guides',
-    'lifetime': 'Spouse Interview Lifetime Access - Robin + PDF Guides',
-    'interviewPass': 'Spouse Interview 90-Day Interview Pass - Robin + PDF Guides',
+    'monthly': 'Spouse Interview Archived Monthly Plan - Retired',
+    'lifetime': 'Spouse Interview Archived Lifetime Plan - Retired',
+    'interviewPass': 'Spouse Interview Archived 90-Day Plan - Retired',
 }
 
 PLAN_CHECKOUT_DETAILS = {
     'monthly': {
-        'summary': 'Monthly premium access with 1,200+ USCIS-style practice questions, premium PDF guides, partner sync, and 20 daily Robin chats.',
-        'terms': '$19.99 today, then $19.99 each month until canceled. Cancel anytime from your dashboard; access continues through the paid billing period.',
+        'summary': 'Retired legacy checkout. Core app access is free; use optional Robin credit packs only when enabled.',
+        'terms': 'This legacy checkout is retired in the free app.',
     },
     'lifetime': {
-        'summary': 'One-time lifetime premium access with 1,200+ USCIS-style practice questions, premium PDF guides, partner sync, and 30 daily Robin chats.',
-        'terms': '$79.99 one-time payment for lifetime access. No renewal is created.',
+        'summary': 'Retired legacy checkout. Core app access is free; use optional Robin credit packs only when enabled.',
+        'terms': 'This legacy checkout is retired in the free app.',
     },
     'interviewPass': {
-        'summary': 'One-time 90-day premium pass with 1,200+ USCIS-style practice questions, premium PDF guides, partner sync, and 20 daily Robin chats.',
-        'terms': '$39.99 one-time payment for 90 days of premium access. No renewal is created.',
+        'summary': 'Retired legacy checkout. Core app access is free; use optional Robin credit packs only when enabled.',
+        'terms': 'This legacy checkout is retired in the free app.',
     },
 }
 
@@ -164,7 +164,7 @@ def _checkout_custom_text(plan_type):
     return {
         'submit': {
             'message': (
-                f"You are unlocking Spouse Interview premium: {details['summary']} "
+                f"This Spouse Interview legacy checkout is retired: {details['summary']} "
                 f"{details['terms']} {REFUND_POLICY_SUMMARY}"
             ),
         },
@@ -658,4 +658,4 @@ def _handle_checkout_completed(session_data):
         _handle_robin_credit_checkout_completed(session_data, metadata)
         return
 
-    print('Ignoring legacy paid-plan checkout.session.completed in free app')
+    print('Ignoring legacy purchase checkout.session.completed in free app')

@@ -14,7 +14,7 @@
 
 import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import type { PlanType, UserSubscription as LegacyUserSubscription } from '@/lib/plans';
+import type { PlanConfig, PlanType, UserSubscription as LegacyUserSubscription } from '@/lib/plans';
 import type { Subscription, SubscriptionStatus, PaymentProvider } from '@/lib/subscriptions/types';
 import { 
   PLAN_CONFIG, 
@@ -22,20 +22,27 @@ import {
   SUBSCRIPTION_STORAGE_KEY,
   TRIAL_START_KEY,
 } from '@/lib/plans';
-import { PLANS, type FeatureAccess } from '@/lib/pricing/types';
 import { 
   buildEffectiveSubscription,
   getSubscriptionDisplayState,
-  hasPremiumAccess,
-  startCheckout,
-  openManageSubscription,
-  createRetentionCheckoutSession,
-  cancelSubscription,
-  resumeSubscription
+  hasAccountAccess,
 } from '@/lib/subscriptions';
 import { supabase } from '@/lib/supabase';
 // Import new entitlement system
 import { useEntitlements, useFeatureAccess, usePlanStatus } from '@/lib/entitlements/hooks';
+
+interface FeatureAccess {
+  practice: boolean;
+  mockInterview: boolean;
+  coupleCompare: boolean;
+  timelineBuilder: boolean;
+  readinessCheck: boolean;
+  pdfDownloads: boolean;
+  printablePacks: boolean;
+  futurePacks: boolean;
+  progressTracking?: boolean;
+  aiInterview?: boolean;
+}
 
 /**
  * Legacy subscription key for migration
@@ -370,66 +377,33 @@ export function usePricing() {
     return false;
   }, []);
   
-  // Legacy paid-access flag now means the signed-in account has usable free access.
-  const hasPremium = useMemo(() => {
+  // Legacy access flag now means the signed-in account has usable free access.
+  const hasAccountAccessFlag = useMemo(() => {
     if (entitlements) {
       return entitlements.subscription.hasAccess;
     }
-    return hasPremiumAccess(effectiveSubscription);
+    return hasAccountAccess(effectiveSubscription);
   }, [entitlements, effectiveSubscription]);
 
   // Legacy upgrade callback. Paid-plan changes are retired in the free app.
   const upgradePlan = useCallback(async (plan: PlanType) => {
-    console.info(`Ignoring legacy plan change to ${plan}; paid-plan upgrades are retired in the free app.`);
+    console.info(`Ignoring legacy plan change to ${plan}; purchase upgrades are retired in the free app.`);
     await refreshEntitlements();
   }, [refreshEntitlements]);
   
-  // Start checkout for a plan
-  const startPlanCheckout = useCallback(async (plan: PlanType) => {
-    return startCheckout(plan, {
-      successUrl: `${window.location.origin}/dashboard?checkout=success`,
-      cancelUrl: `${window.location.origin}/pricing?checkout=canceled`,
-    });
+  const retiredPurchaseAction = useCallback(async (_plan?: PlanType) => {
+    return {
+      success: false,
+      error: 'This purchase action is retired in the free app.',
+    };
   }, []);
 
-  const upgradeToLifetime = useCallback(async () => {
-    return startCheckout('lifetime', {
-      successUrl: `${window.location.origin}/dashboard?checkout=success&plan=lifetime`,
-      cancelUrl: `${window.location.origin}/dashboard?checkout=canceled`,
-    });
-  }, []);
-
-  const startRetentionOffer = useCallback(async () => {
-    const result = await createRetentionCheckoutSession(
-      `${window.location.origin}/dashboard?checkout=success&plan=interviewPass&retention=accepted`,
-      `${window.location.origin}/dashboard?retention=canceled`
-    );
-    if (result.success && result.checkoutUrl) {
-      window.location.href = result.checkoutUrl;
-    }
-    return result;
-  }, []);
-
-  const cancelPlanRenewal = useCallback(async () => {
-    const result = await cancelSubscription();
-    if (result.success) {
-      await refreshSubscription();
-    }
-    return result;
-  }, [refreshSubscription]);
-
-  const resumePlanRenewal = useCallback(async () => {
-    const result = await resumeSubscription();
-    if (result.success) {
-      await refreshSubscription();
-    }
-    return result;
-  }, [refreshSubscription]);
-  
-  // Open subscription management
-  const manageSubscription = useCallback(async () => {
-    return openManageSubscription();
-  }, []);
+  const startPlanCheckout = retiredPurchaseAction;
+  const upgradeToLifetime = retiredPurchaseAction;
+  const startRetentionOffer = retiredPurchaseAction;
+  const cancelPlanRenewal = retiredPurchaseAction;
+  const resumePlanRenewal = retiredPurchaseAction;
+  const manageSubscription = retiredPurchaseAction;
 
   // Get days left in trial - from Supabase entitlements ONLY
   const trialDaysLeft = useMemo(() => {
@@ -452,10 +426,10 @@ export function usePricing() {
     return 0;
   }, [entitlements]);
 
-  // Get current plan details (from legacy PLANS for backward compatibility)
+  // Get current plan details for backward compatibility.
   const currentPlan = useMemo(() => {
     const plan = effectiveLegacySubscription.plan;
-    return PLANS[plan];
+    return PLAN_CONFIG[plan] as PlanConfig;
   }, [effectiveLegacySubscription.plan]);
 
   // Get effective plan (considering expiration)
@@ -498,7 +472,7 @@ export function usePricing() {
     isTrialExpired,
     isPassExpired,
     isPracticeLocked,
-    hasPremium,
+    hasAccountAccess: hasAccountAccessFlag,
     
     // Days remaining
     trialDaysLeft,
@@ -519,7 +493,6 @@ export function usePricing() {
     refreshSubscription,
     
     // Constants
-    PLANS,
     PLAN_CONFIG,
   };
 }

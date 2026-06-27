@@ -355,7 +355,7 @@ export const AI_ERROR_MESSAGES: Record<string, { title: string; message: string;
   },
   upgrade_required: {
     title: 'Upgrade Required',
-    message: 'This feature requires a premium plan. Upgrade to unlock all features.',
+    message: 'This feature is controlled by Admin settings. Please check your current app access.',
     action: 'View Plans',
   },
   network_error: {

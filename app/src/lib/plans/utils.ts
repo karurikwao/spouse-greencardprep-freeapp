@@ -50,15 +50,15 @@ export function getPlanDisplayName(plan: PlanType): string {
 }
 
 /**
- * Get all available paid plans (for pricing page)
- * @returns Array of paid plan configurations
+ * Get all available purchase plans (for compatibility pages)
+ * @returns Array of purchase plan configurations
  */
 export function getPaidPlans(): PlanConfig[] {
   return PAID_PLANS;
 }
 
 /**
- * Check if a plan is a paid plan
+ * Check if a plan is a purchase plan
  * @param plan - The plan type
  * @returns True if the plan requires payment
  */
@@ -424,7 +424,7 @@ export function recordTurns(turnCount: number): void {
 // ============================================================================
 
 /**
- * Get pricing display information for all paid plans
+ * Get pricing display information for all purchase plans
  * @param currentPlan - The user's current plan
  * @returns Array of pricing display info
  */

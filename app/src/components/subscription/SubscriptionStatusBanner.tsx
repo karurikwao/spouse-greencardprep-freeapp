@@ -2,7 +2,7 @@
  * Free-app subscription status compatibility.
  *
  * Legacy pages may still import these components, but the free app should not
- * show billing warnings, premium-access states, or trial countdown CTAs.
+ * show billing warnings, purchase-access states, or countdown CTAs.
  */
 
 import { Sparkles } from 'lucide-react';

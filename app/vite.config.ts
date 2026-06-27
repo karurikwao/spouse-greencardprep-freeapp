@@ -55,7 +55,6 @@ export default defineConfig({
             { url: `${baseUrl}/`, lastmod: now, changefreq: sitemapFrequency, priority: '1.0' },
             { url: `${baseUrl}/dashboard`, lastmod: now, changefreq: sitemapFrequency, priority: '0.9' },
             { url: `${baseUrl}/readiness`, lastmod: now, changefreq: sitemapFrequency, priority: '0.8' },
-            { url: `${baseUrl}/pricing`, lastmod: now, changefreq: sitemapFrequency, priority: '0.8' },
             { url: `${baseUrl}/marriage-interview-questions`, lastmod: now, changefreq: sitemapFrequency, priority: '0.95' },
             { url: `${baseUrl}/immigration-interview-question-database`, lastmod: now, changefreq: sitemapFrequency, priority: '0.9' },
             { url: `${baseUrl}/marriage-green-card-interview-preparation`, lastmod: now, changefreq: sitemapFrequency, priority: '0.98' },

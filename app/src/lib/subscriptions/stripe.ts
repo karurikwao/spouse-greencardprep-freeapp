@@ -77,11 +77,11 @@ export async function createCheckoutSession(
   promoCode?: string
 ): Promise<CheckoutSessionResult> {
   try {
-    // Only paid plans can be purchased
+    // Only archived purchase plans can be sent through this compatibility path.
     if (planType === 'trial') {
       return {
         success: false,
-        error: 'Trial plan does not require payment',
+        error: 'Free account access does not require payment',
         code: 'INVALID_PLAN',
       };
     }

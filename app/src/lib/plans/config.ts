@@ -3,8 +3,8 @@
  * 
  * Central compatibility configuration for legacy plan definitions.
  * 
- * The app now uses a free baseline. Legacy paid plan records remain here so old
- * subscription rows and imports keep compiling, but public purchase flows are
+ * The app now uses a free baseline. Archived plan records remain here so old
+ * account rows and imports keep compiling, but public purchase flows are
  * retired and optional Robin credit packs should be configured in Admin.
  */
 
@@ -74,9 +74,9 @@ const TRIAL_FEATURES: PlanFeatures = {
 };
 
 /**
- * Legacy paid-plan features. Kept for compatibility with old rows only.
+ * Archived plan features. Kept for compatibility with old rows only.
  */
-const PREMIUM_FEATURES: PlanFeatures = {
+const ARCHIVED_PLAN_FEATURES: PlanFeatures = {
   practiceQuestions: true,
   readinessCheck: true,
   aiInterview: true,
@@ -107,56 +107,45 @@ const TRIAL_CONFIG: TrialPlanConfig = {
 };
 
 /**
- * Monthly Premium Plan
- * - $19.99/month
- * - Unlimited practice
- * - Full AI interview access
- * - All features enabled
+ * Archived monthly plan record.
+ * Kept only so older local/account rows can still be read safely.
  */
 const MONTHLY_CONFIG: SubscriptionPlanConfig = {
   id: 'monthly',
-  name: 'Premium Monthly',
-  description: 'Full access with 20 daily Robin chats and all features',
+  name: 'Archived Monthly Plan',
+  description: 'Retired legacy plan record. Core access is free; Robin credits are optional only when enabled.',
   price: 19.99,
   billingInterval: 'month',
-  priceLabel: '$19.99/month',
+  priceLabel: 'Retired',
   aiLimits: HIGH_AI_LIMITS,
-  features: PREMIUM_FEATURES,
+  features: ARCHIVED_PLAN_FEATURES,
 };
 
 /**
- * Lifetime Plan
- * - $79.99 one-time
- * - Same features as the legacy paid tier
- * - Highest AI limits
- * - Best value
+ * Archived lifetime plan record.
  */
 const LIFETIME_CONFIG: LifetimePlanConfig = {
   id: 'lifetime',
-  name: 'Lifetime Access',
-  description: 'Full access forever with 30 daily Robin chats - best value',
+  name: 'Archived Lifetime Plan',
+  description: 'Retired legacy plan record. Core access is free; Robin credits are optional only when enabled.',
   price: 79.99,
-  priceLabel: '$79.99 one-time',
+  priceLabel: 'Retired',
   aiLimits: UNLIMITED_AI_LIMITS,
-  features: PREMIUM_FEATURES,
+  features: ARCHIVED_PLAN_FEATURES,
 };
 
 /**
- * 90-Day Interview Pass
- * - $39.99 one-time
- * - 90 days duration
- * - Same features as the legacy paid tier
- * - Medium AI limits
+ * Archived 90-day plan record.
  */
 const INTERVIEW_PASS_CONFIG: PassPlanConfig = {
   id: 'interviewPass',
-  name: '90-Day Interview Pass',
-  description: 'Full access for 90 days - perfect for upcoming interviews',
+  name: 'Archived 90-Day Plan',
+  description: 'Retired legacy plan record. Core access is free; Robin credits are optional only when enabled.',
   price: 39.99,
   durationDays: 90,
-  priceLabel: '$39.99 for 90 days',
+  priceLabel: 'Retired',
   aiLimits: MEDIUM_AI_LIMITS,
-  features: PREMIUM_FEATURES,
+  features: ARCHIVED_PLAN_FEATURES,
 };
 
 /**
@@ -173,7 +162,7 @@ const ANONYMOUS_CONFIG: AnonymousPlanConfig = {
   price: 0,
   durationDays: 0,
   aiLimits: { maxTurnsPerSession: 0, maxSessionsPerDay: 0 },
-  features: TRIAL_FEATURES, // Same restrictions as trial
+  features: TRIAL_FEATURES,
 };
 
 // ============================================================================
@@ -204,7 +193,7 @@ export const PLANS_ARRAY: PlanConfig[] = [
 ];
 
 /**
- * Public-facing paid plans. Empty while the free-app conversion is active.
+ * Public purchase plans. Empty while the free-app conversion is active.
  */
 export const PAID_PLANS: PlanConfig[] = [
 ];

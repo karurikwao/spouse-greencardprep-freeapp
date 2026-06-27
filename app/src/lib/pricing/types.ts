@@ -133,11 +133,11 @@ export const PLANS: Record<PlanType, PricingPlan> = {
     priceLabel: (PLAN_CONFIG.lifetime as { priceLabel: string }).priceLabel,
     description: PLAN_CONFIG.lifetime.description,
     features: [
-      'Everything unlocked',
+      'Archived access record',
       'All PDF downloads',
       'Printable study packs',
       'Future question packs',
-      'Priority support',
+      'Support from the app team',
     ],
     disabledFeatures: [],
   },
@@ -148,7 +148,7 @@ export const PLANS: Record<PlanType, PricingPlan> = {
     priceLabel: (PLAN_CONFIG.interviewPass as { priceLabel: string }).priceLabel,
     description: PLAN_CONFIG.interviewPass.description,
     features: [
-      'Full access for 90 days',
+      'Archived 90-day access record',
       'All PDF downloads',
       'Robin interview practice',
       'Couple comparison',

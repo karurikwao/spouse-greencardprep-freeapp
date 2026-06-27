@@ -17,7 +17,7 @@ export interface AIModelOption {
   modelId: string;
   displayName: string;
   description?: string;
-  tier: 'budget' | 'standard' | 'premium';
+  tier: 'budget' | 'standard' | 'advanced';
   enabled: boolean;
   defaultForProvider?: boolean;
   defaultForInterview?: boolean;

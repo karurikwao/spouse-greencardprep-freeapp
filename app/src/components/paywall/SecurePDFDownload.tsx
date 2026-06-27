@@ -2,7 +2,7 @@
  * Secure PDF Download Component
  * 
  * Free-app PDF download button with signed delivery and a simple practice
- * disclaimer. Users must be signed in, but PDFs are no longer premium-gated.
+ * disclaimer. Users must be signed in, but PDFs are no longer purchase-gated.
  */
 
 import { useState } from 'react';

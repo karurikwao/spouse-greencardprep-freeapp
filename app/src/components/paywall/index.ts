@@ -1,7 +1,7 @@
 /**
  * Paywall Components
  * 
- * Components for handling premium features and upgrade prompts.
+ * Components for handling free-app access prompts.
  */
 
 export {
@@ -11,6 +11,6 @@ export {
   TrialBanner,
 } from './UpgradePrompt';
 
-// NEW: Supabase-backed entitlement gates (USE THESE for all premium features)
+// Free-app entitlement gates retained for import compatibility.
 export { EntitlementFeatureGate, useFeatureGate } from './FeatureGate';
 export { SecurePDFDownload } from './SecurePDFDownload';

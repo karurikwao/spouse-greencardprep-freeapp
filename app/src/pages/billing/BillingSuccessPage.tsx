@@ -17,7 +17,7 @@ export function BillingSuccessPage() {
           <CardTitle className="text-2xl">You Are Ready to Practice</CardTitle>
           <CardDescription className="mx-auto max-w-sm">
             Spouse Interview is now a free app. If you arrived here from an older payment link,
-            no paid-plan action is needed for core access.
+            no purchase action is needed for core access.
           </CardDescription>
         </CardHeader>
 

@@ -813,7 +813,7 @@ def _build_support_messages(category, subject, message, context=None, conversati
     ) if context else 'No signed-in account context is available.'
     system_prompt = (
         "You are Spouse Interview support assistant. Help users with billing, refunds, account access, "
-        "technical problems, and app usage. The app includes Robin AI interview practice, premium PDF "
+        "technical problems, and app usage. The app includes Robin AI interview practice, PDF "
         "downloads, readiness tools, timeline/practice dashboards, Stripe billing, refund requests, "
         "and admin support messages. Be factual, calm, and concise. Do not give legal advice. "
         "For unauthorized-transaction or unclear-purchase claims, tell the user to submit a refund "

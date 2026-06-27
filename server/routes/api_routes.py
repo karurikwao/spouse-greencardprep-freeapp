@@ -854,7 +854,6 @@ def call_rpc(func_name):
         'get_pending_refund_requests',
         'get_verification_code', 'upsert_verification_code',
         'soft_delete_user', 'get_user_profile',
-        'has_premium_access',
         'increment_download', 'reset_stats',
         'process-refund', 'trigger-rebuild',
     }
@@ -892,7 +891,7 @@ def call_rpc(func_name):
         'create_answer_candidate', 'get_unread_notification_count',
         'mark_notification_read', 'create_support_ticket',
         'get_user_tickets_with_replies', 'create_refund_request',
-        'soft_delete_user', 'get_user_profile', 'has_premium_access',
+        'soft_delete_user', 'get_user_profile',
         'record_referral_event', 'increment_download',
     }
 
@@ -1058,7 +1057,6 @@ def call_rpc(func_name):
             'p_notes': lambda: data.get('notes'),
             'p_environment': lambda: data.get('environment', 'production'),
         },
-        'has_premium_access': {'p_user_id': lambda: data.get('p_user_id', user['id'] if user else None)},
         'get_user_profile': {'p_user_id': lambda: user['id']},
     'soft_delete_user': {'p_user_id': lambda: user['id']},
     'get_user_download_events': {
@@ -3713,6 +3711,12 @@ def _serialize_broadcast(row, analytics=None):
 
 
 def _broadcast_recipients(audience_type):
+    legacy_audience_map = {
+        'trial_users': 'free_users',
+        'premium_users': 'robin_users',
+        'expired_users': 'reengagement_users',
+    }
+    audience_type = legacy_audience_map.get(audience_type, audience_type or 'all_users')
     return db.query_all(
         """
         SELECT u.id::text AS user_id, u.email,
@@ -3738,11 +3742,11 @@ def _broadcast_recipients(audience_type):
             WHEN 'robin_users' THEN COALESCE(ai.total_turns_today, 0) > 0
             WHEN 'unread_message_users' THEN COALESCE(ns.unread_messages, 0) > 0
             WHEN 'reengagement_users' THEN COALESCE(u.updated_at, u.created_at) < now() - INTERVAL '7 days'
-            ELSE true
+            ELSE false
           END
         LIMIT 2000
         """,
-        (audience_type or 'all_users',),
+        (audience_type,),
     )
 
 
@@ -3867,7 +3871,7 @@ def admin_broadcasts_endpoint():
     }
     audience_type = legacy_audience_map.get(audience_type, audience_type)
     if audience_type not in {'all_users', 'free_users', 'robin_users', 'unread_message_users', 'reengagement_users'}:
-        audience_type = 'all_users'
+        return jsonify({'error': 'Unsupported broadcast audience'}), 400
     scheduled_at = data.get('scheduledAt') or data.get('scheduled_at') or None
     send_email = bool(data.get('sendEmail', data.get('send_email', True)))
     publish_now = bool(data.get('publishNow', data.get('publish_now', True)))
@@ -4002,14 +4006,17 @@ def user_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('support ticket reply')
 
 @api_bp.route('/admin/support/tickets', methods=['GET', 'POST'])
+@require_admin
 def admin_support_tickets():
     return _free_app_workflow_retired_response('admin support ticket')
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/reply', methods=['POST'])
+@require_admin
 def admin_reply_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket reply')
 
 @api_bp.route('/admin/support/tickets/<ticket_id>/close', methods=['POST'])
+@require_admin
 def admin_close_support_ticket(ticket_id):
     return _free_app_workflow_retired_response('admin support ticket close')
 

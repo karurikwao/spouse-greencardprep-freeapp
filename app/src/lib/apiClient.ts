@@ -145,20 +145,19 @@ function normalizeAuthSession(data: AuthSessionPayload | null): AuthSession | nu
   };
 }
 
-const RETIRED_FREE_APP_FUNCTIONS = new Set([
-  'create-checkout-session',
-  'create-retention-checkout-session',
-  'confirm-checkout-session',
-  'create-customer-portal',
-  'cancel-subscription',
-  'resume-subscription',
-  'request-refund',
+const RETIRED_FREE_APP_FUNCTION_MARKERS = [
+  'checkout',
+  'customer-portal',
+  'subscription',
+  'refund',
+  'support-ticket',
   'support-ai-assist',
-  'create-support-ticket',
-  'admin-support-tickets',
-  'admin-support-ticket-draft',
-  'process-refund',
-]);
+  'admin-support',
+];
+
+function isRetiredFreeAppFunction(name: string): boolean {
+  return RETIRED_FREE_APP_FUNCTION_MARKERS.some((marker) => name.includes(marker));
+}
 
 export const apiClient = {
   auth: {
@@ -340,7 +339,7 @@ export const apiClient = {
   },
 
   async invokeFunction<T = unknown>(name: string, body: Record<string, unknown> = {}) {
-    if (RETIRED_FREE_APP_FUNCTIONS.has(name)) {
+    if (isRetiredFreeAppFunction(name)) {
       return {
         data: null,
         error: {
@@ -351,22 +350,10 @@ export const apiClient = {
     }
 
     const routeMap: Record<string, string> = {
-      'create-checkout-session': '/api/stripe/create-checkout-session',
-      'create-retention-checkout-session': '/api/stripe/create-retention-checkout-session',
-      'confirm-checkout-session': '/api/stripe/confirm-checkout-session',
-      'create-customer-portal': '/api/stripe/create-customer-portal',
-      'cancel-subscription': '/api/stripe/cancel-subscription',
-      'resume-subscription': '/api/stripe/resume-subscription',
-      'request-refund': '/api/stripe/request-refund',
       'generate-pdf-signed-url': '/api/pdf/generate-signed-url',
       'ai-interview-turn': '/api/ai/interview-turn',
       'dashboard-agent-question': '/api/ai/dashboard-agent',
       'dashboard-agent-history': '/api/ai/dashboard-agent/history',
-      'support-ai-assist': '/api/ai/support-assist',
-      'create-support-ticket': '/api/support/tickets',
-      'admin-support-tickets': '/api/admin/support/tickets',
-      'admin-support-ticket-draft': '/api/ai/support-ticket-draft',
-      'process-refund': '/api/process-refund',
       'trigger-coolify-rebuild': '/api/rpc/trigger-rebuild',
       'admin-users': '/api/admin/users',
     };
